@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'css/base.css' %}">
+    <meta charset="UTF-8">
+    <title>{% block title %} No Title Loaded {% endblock %}</title>
+</head>
+<body>
+    <div class="sidebar">
+        <a href="/">Home</a>
+        <a href="/Input_data">Input Data</a>
+        <a href="/Plate_layout">Plate Layout</a>
+        <a href="/Dilutions">Dilutions</a>
+        <a href="/Visualize_data">Visualize Data</a>
+        <a href="/Cut_off">Cut-off</a>
+        <a href="/Intermediate_result">Intermediate Results</a>
+        <a href="/End_results">End Results</a>
+    </div>
+
+    <div class="header">
+        <a>{% block header %}
+            no header loaded
+        {% endblock %}</a>
+    </div>
+
+    <div id="content" class="main">
+        {% block content %}
+            no content loaded
+        {% endblock %}
+    </div>
+</body>
+</html>

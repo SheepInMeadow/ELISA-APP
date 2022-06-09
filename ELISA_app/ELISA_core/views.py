@@ -38,4 +38,3 @@ def Intermediate_result(request):
 
 def End_results(request):
     return render(request, 'End_results')
-
