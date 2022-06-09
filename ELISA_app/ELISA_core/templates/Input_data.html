@@ -1,10 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+
+{% block title %} Input Data {% endblock %}
+{% block header %} Input Data {% endblock %}
+
+{% block content %}
     <p>Paste your data here:</p>
     <textarea rows="20" cols="100"></textarea><button type="submit" id="1" name="2">Upload data</button>
     <br><br>
@@ -13,5 +12,4 @@
         <input type="file" name="my_file"/>
         <input type="submit" value="Upload data"/>
     </form>
-</body>
-</html>
+{% endblock %}
