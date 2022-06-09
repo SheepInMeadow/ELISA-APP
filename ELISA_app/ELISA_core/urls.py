@@ -18,5 +18,12 @@ from django.urls import path
 from .views import *
 
 urlpatterns = [
-    path('', placeholder),
+    path('', Home),
+    path('Input_data', Input_data),
+    path('Plate_layout', Plate_layout),
+    path('Dilutions', Dilutions),
+    path('Visualize_data', Visualize_data),
+    path('Cut_off', Cut_off),
+    path('Intermediate_result', Intermediate_result),
+    path('End_results', End_results),
 ]
