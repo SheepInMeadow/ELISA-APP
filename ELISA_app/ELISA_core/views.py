@@ -22,19 +22,19 @@ def Input_data(request):
         return render(request, 'Input_data.html')
 
 def Plate_layout(request):
-    return render(request, 'Plate_layout')
+    return render(request, 'Plate_layout.html')
 
 def Dilutions(request):
-    return render(request, 'Dilutions')
+    return render(request, 'Dilutions.html')
 
 def Visualize_data(request):
-    return render(request, 'Visualize_data')
+    return render(request, 'Visualize_data.html')
 
 def Cut_off(request):
-    return render(request, 'Cut_off')
+    return render(request, 'Cut_off.html')
 
 def Intermediate_result(request):
-    return render(request, 'Intermediate_result')
+    return render(request, 'Intermediate_result.html')
 
 def End_results(request):
-    return render(request, 'End_results')
+    return render(request, 'End_results.html')
