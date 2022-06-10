@@ -4,12 +4,14 @@
 {% block header %} Input Data {% endblock %}
 
 {% block content %}
-    <p>Paste your data here:</p>
-    <textarea rows="20" cols="100"></textarea><button type="submit" id="1" name="2">Upload data</button>
-    <br><br>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <input type="file" name="my_file"/>
-        <input type="submit" value="Upload data"/>
+        <p>Paste your data here:</p>
+        <textarea rows="20" cols="100" name="text_input"></textarea>
+        <input type="submit" name="text_submit" value="Upload data"/>
+        <br><br>
+        <input type="file" name="my_file" multiple/>
+        <input type="submit" name="file_submit" value="Upload data"/>
     </form>
+    <span id="message"></span>
 {% endblock %}
