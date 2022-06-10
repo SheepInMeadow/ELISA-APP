@@ -13,5 +13,19 @@
         <input type="file" name="my_file" multiple/>
         <input type="submit" name="file_submit" value="Upload data"/>
     </form>
-    <span id="message"></span>
+    {% if check == 'text' %}
+        <p>No data was found in the textarea, please try again.</p>
+    {% endif %}
+    {% if check == 'file' %}
+        <p>No files were selected, please try again.</p>
+    {% endif %}
+    {% if check == 'correct' %}
+        <p>Data was succesfully uploaded.</p>
+    {% endif %}
+    {% if check == 'extension' %}
+        <p>Wrong file(s) were submitted, please try again. (allowed file types are .txt and .xlsx)</p>
+    {% endif %}
+    {% if check == 'false' %}
+        <p>Input was not properly formatted, please try again.</p>
+    {% endif %}
 {% endblock %}

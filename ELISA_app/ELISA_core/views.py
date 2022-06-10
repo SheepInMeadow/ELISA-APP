@@ -7,21 +7,41 @@ def Home(request):
     return render(request, 'Home.html')
 
 def Input_data(request):
-    if request.method == 'POST':
-        if request.POST.get('text_submit'):
-            data = request.POST.get('text_input')
-            data = data.strip().split('\r\n')
-            formatted_data = formatting_txt(data, 1)
-        if request.POST.get('file_submit'):
-            for file in request.FILES.getlist('my_file'):
-                if str(file).split('.')[1] == 'txt':
-                    data = file.readlines()
-                    formatted_data = formatting_txt(data, 2)
-                elif str(file).split('.')[1] == 'xlsx':
-                    formatted_data = formatting_xlsx(file)
-        return render(request, 'Input_data.html')
-    else:
-        return render(request, 'Input_data.html')
+    try:
+        if request.method == 'POST':
+            if request.POST.get('text_submit'):
+                data = request.POST.get('text_input')
+                if data == '':
+                    return render(request, 'Input_data.html', {
+                        'check': 'text',
+                    })
+                data = data.strip().split('\r\n')
+                formatted_data = formatting_txt(data, 1)
+            if request.POST.get('file_submit'):
+                if request.FILES.getlist('my_file') == []:
+                    return render(request, 'Input_data.html', {
+                        'check': 'file',
+                    })
+                for file in request.FILES.getlist('my_file'):
+                    if str(file).split('.')[1] not in ['txt', 'xlsx']:
+                        return render(request, 'Input_data.html', {
+                            'check': 'extension',
+                        })
+                for file in request.FILES.getlist('my_file'):
+                    if str(file).split('.')[1] == 'txt':
+                        data = file.readlines()
+                        formatted_data = formatting_txt(data, 2)
+                    elif str(file).split('.')[1] == 'xlsx':
+                        formatted_data = formatting_xlsx(file)
+            return render(request, 'Input_data.html', {
+                'check': 'correct',
+            })
+        else:
+            return render(request, 'Input_data.html')
+    except:
+        return render(request, 'Input_data.html', {
+            'check': 'false',
+        })
 
 def formatting_txt(data, counter):
     lines = list()
