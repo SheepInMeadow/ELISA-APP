@@ -4,5 +4,18 @@
 {% block header %} Plate Layout {% endblock %}
 
 {% block content %}
-    content here
+{% for key, value_list in dictionary.items %}
+    <table border="1">
+        <thead>
+            <td>{{key}}</td>
+        </thead>
+        {% for value in value_list %}
+        <tr>
+        {% for i in value %}
+            <td>{{i}}</td>
+        {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+{% endfor %}
 {% endblock %}

@@ -2,6 +2,7 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from .models import Plates
 import openpyxl
+import json
 
 # Create your views here.
 def Home(request):
@@ -17,8 +18,8 @@ def Input_data(request):
                         'check': 'text',
                     })
                 data = data.strip().split('\r\n')
-                formatted_data = formatting_txt(data, 1)
-                database(formatted_data)
+                data_string = formatting_txt(data, 1)
+                database(data_string)
             if request.POST.get('file_submit'):
                 if request.FILES.getlist('my_file') == []:
                     return render(request, 'Input_data.html', {
@@ -32,11 +33,11 @@ def Input_data(request):
                 for file in request.FILES.getlist('my_file'):
                     if str(file).split('.')[1] == 'txt':
                         data = file.readlines()
-                        formatted_data = formatting_txt(data, 2)
-                        database(formatted_data)
+                        data_string = formatting_txt(data, 2)
+                        database(data_string)
                     elif str(file).split('.')[1] == 'xlsx':
-                        formatted_data = formatting_xlsx(file)
-                        database(formatted_data)
+                        data_string = formatting_xlsx(file)
+                        database(data_string)
             return render(request, 'Input_data.html', {
                 'check': 'correct',
             })
@@ -59,7 +60,11 @@ def formatting_txt(data, counter):
         line = j.split('\t')
         formatted_data.append(line)
     formatted_data[1].insert(0, '#')
-    return formatted_data
+    data_string = ""
+    for i in formatted_data:
+        for j in i:
+            data_string += j + "="
+    return data_string
 
 def formatting_xlsx(file_name):
     wb = openpyxl.load_workbook(file_name)
@@ -74,23 +79,48 @@ def formatting_xlsx(file_name):
     del formatted_data[1][0]
     del formatted_data[0][1:]
     formatted_data[1].insert(0, '#')
-    return formatted_data
+    data_string = ""
+    for i in formatted_data:
+        for j in i:
+            data_string += j + "="
+    return data_string
 
 id = 1
 
-def database(formatted_data):
+def database(data_string):
     global id
-    print(formatted_data[0])
+    split = data_string.split('=')
     plates_instance = Plates.objects.create(
-        id=id,
-        name=str(formatted_data[0]),
-        data=str(formatted_data[1:])
+        id=str(id),
+        name=str(split[0]),
+        data=data_string
     )
     id += 1
 
 
 def Plate_layout(request):
-    return render(request, 'Plate_layout.html')
+    data = Plates.objects.values()
+    dictionary = {}
+    teller = 1
+    counter = 0
+    nested = []
+    temp = []
+    for i in data:
+        lines = i['data'].split('=')[:-1]
+        for j in lines[1:]:
+            temp.append(j)
+            counter += 1
+            if counter == 13:
+                nested.append(temp)
+                counter = 0
+                temp = []
+        dictionary[teller] = nested
+        nested = []
+        teller += 1
+    print(dictionary)
+    return render(request, 'Plate_layout.html', {
+        'dictionary': dictionary,
+    })
 
 def Dilutions(request):
     return render(request, 'Dilutions.html')
