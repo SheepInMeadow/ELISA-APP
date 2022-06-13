@@ -1,5 +1,6 @@
 from django.http import HttpResponse
-from django.shortcuts import  render, redirect
+from django.shortcuts import render, redirect
+from .models import Plates
 import openpyxl
 
 # Create your views here.
@@ -17,6 +18,7 @@ def Input_data(request):
                     })
                 data = data.strip().split('\r\n')
                 formatted_data = formatting_txt(data, 1)
+                database(formatted_data)
             if request.POST.get('file_submit'):
                 if request.FILES.getlist('my_file') == []:
                     return render(request, 'Input_data.html', {
@@ -31,8 +33,10 @@ def Input_data(request):
                     if str(file).split('.')[1] == 'txt':
                         data = file.readlines()
                         formatted_data = formatting_txt(data, 2)
+                        database(formatted_data)
                     elif str(file).split('.')[1] == 'xlsx':
                         formatted_data = formatting_xlsx(file)
+                        database(formatted_data)
             return render(request, 'Input_data.html', {
                 'check': 'correct',
             })
@@ -45,7 +49,7 @@ def Input_data(request):
 
 def formatting_txt(data, counter):
     lines = list()
-    for i in data[1:-1]:
+    for i in data[:-1]:
         if counter == 1:
             lines.append(i.strip())
         elif counter == 2:
@@ -54,8 +58,7 @@ def formatting_txt(data, counter):
     for j in lines:
         line = j.split('\t')
         formatted_data.append(line)
-    formatted_data[0].insert(0, '#')
-    print(formatted_data)
+    formatted_data[1].insert(0, '#')
     return formatted_data
 
 def formatting_xlsx(file_name):
@@ -67,11 +70,24 @@ def formatting_xlsx(file_name):
         for cell in row:
             row_data.append(str(cell.value))
         excel_data.append(row_data)
-    formatted_data = excel_data[1::]
-    del formatted_data[0][0]
-    formatted_data[0].insert(0, '#')
-    print(formatted_data)
+    formatted_data = excel_data
+    del formatted_data[1][0]
+    del formatted_data[0][1:]
+    formatted_data[1].insert(0, '#')
     return formatted_data
+
+id = 1
+
+def database(formatted_data):
+    global id
+    print(formatted_data[0])
+    plates_instance = Plates.objects.create(
+        id=id,
+        name=str(formatted_data[0]),
+        data=str(formatted_data[1:])
+    )
+    id += 1
+
 
 def Plate_layout(request):
     return render(request, 'Plate_layout.html')
