@@ -129,20 +129,50 @@ def Dilutions(request):
     if request.method == 'POST':
         if request.POST.get('dilution_submit'):
             dilution = request.POST.get('dilution')
-            print(dilution)
             ll = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
             end_list = [["#", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]]
             for i in range(9):
                 temp = []
                 for x in range(13):
-                    if x == 0:
-                        temp.append(ll[i])
-                    elif x == 1 or x == 2:
-                        temp.append("1")
+                    if i == 0:
+                        if x == 0:
+                            temp.append(ll[i])
+                        elif x == 1 or x == 2 or x == 3 or x == 8:
+                            temp.append("1")
+                        else:
+                            temp.append(dilution)
                     else:
-                        temp.append(dilution)
+                        if x == 0:
+                            temp.append(ll[i])
+                        elif x == 1 or x == 2:
+                            temp.append("1")
+                        else:
+                            temp.append(dilution)
                 end_list.append(temp)
             end_dilution = end_list
+            return render(request, 'Dilutions.html', {
+                "end_list": end_list
+            })
+        if request.POST.get('adjust_dilution_submit'):
+            end_list = end_dilution
+            adj_dil = request.POST.get('adjust_dilution')
+            column = int(request.POST.get('adjust_column'))
+            row = int(request.POST.get('adjust_row'))
+            print(adj_dil, column, row)
+            print(end_list)
+            print(end_list[row][column])
+           # new_list = [[x.replace(end_list[row][column], adj_dil) for x in i] for i in end_list]
+           #  new_list = []
+            for i in range(len(end_list)):
+                # temp1 = []
+                for x in range(len(end_list[i])):
+                    if i == row and x == column:
+                        # x = adj_dil
+                        end_list[row][column].replace(end_list[row][column], adj_dil)
+                    # temp1.append(end_list[i][x])
+                # new_list.append(temp1)
+            # print(new_list)
+            # print(end_list)
             return render(request, 'Dilutions.html', {
                 "end_list": end_list
             })

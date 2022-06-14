@@ -8,6 +8,9 @@
         {% csrf_token %}
         Give the dilution: <input type="number" name="dilution">
         <input type="submit" name="dilution_submit"><br><br>
+        Adjust single dilution value: <input type="number" name="adjust_dilution"><br>
+        Column: <input type="number" name="adjust_column"> Row: <input type="number" name="adjust_row">
+        <input type="submit" name="adjust_dilution_submit" value="Adjust"><br><br>
         <table border="1">
             {% for x in end_list %}
                 <tr>
