@@ -122,7 +122,10 @@ def Plate_layout(request):
         'dictionary': dictionary,
     })
 
+
+end_dilution = []
 def Dilutions(request):
+    global end_dilution
     if request.method == 'POST':
         if request.POST.get('dilution_submit'):
             dilution = request.POST.get('dilution')
@@ -139,7 +142,7 @@ def Dilutions(request):
                     else:
                         temp.append(dilution)
                 end_list.append(temp)
-            print(end_list)
+            end_dilution = end_list
             return render(request, 'Dilutions.html', {
                 "end_list": end_list
             })
