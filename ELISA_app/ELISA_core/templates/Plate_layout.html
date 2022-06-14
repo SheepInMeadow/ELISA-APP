@@ -4,16 +4,22 @@
 {% block header %} Plate Layout {% endblock %}
 
 {% block content %}
-{% for key, value_list in dictionary.items %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="my_file"/>
+    <input type="submit" name="file_submit" value="Upload data"/><br>
+{% if totaal != "" %}
+    ST values of all plates: <input type="number" name="standaard"><br>
+    <input type="submit" name="standaard_input" value="Update table">
+{% endif %}
+</form>
+{% for i in totaal %}
     <table border="1">
-        <thead>
-            <td>{{key}}</td>
-        </thead>
-        {% for value in value_list %}
+        {% for j in i %}
         <tr>
-        {% for i in value %}
-            <td>{{i}}</td>
-        {% endfor %}
+            {% for k in j %}
+            <td>{{k}}</td>
+            {% endfor %}
         </tr>
         {% endfor %}
     </table>
