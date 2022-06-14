@@ -123,6 +123,26 @@ def Plate_layout(request):
     })
 
 def Dilutions(request):
+    if request.method == 'POST':
+        if request.POST.get('dilution_submit'):
+            dilution = request.POST.get('dilution')
+            print(dilution)
+            ll = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+            end_list = [["#", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]]
+            for i in range(9):
+                temp = []
+                for x in range(13):
+                    if x == 0:
+                        temp.append(ll[i])
+                    elif x == 1 or x == 2:
+                        temp.append("1")
+                    else:
+                        temp.append(dilution)
+                end_list.append(temp)
+            print(end_list)
+            return render(request, 'Dilutions.html', {
+                "end_list": end_list
+            })
     return render(request, 'Dilutions.html')
 
 def Visualize_data(request):

@@ -4,5 +4,18 @@
 {% block header %} Dillutions {% endblock %}
 
 {% block content %}
-    content here
+    <form method="post">
+        {% csrf_token %}
+        Give the dilution: <input type="number" name="dilution">
+        <input type="submit" name="dilution_submit"><br><br>
+        <table border="1">
+            {% for x in end_list %}
+                <tr>
+                {% for i in x %}
+                    <td>{{i}}</td>
+                {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+    </form>
 {% endblock %}
