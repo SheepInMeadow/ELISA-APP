@@ -153,29 +153,6 @@ def Dilutions(request):
             return render(request, 'Dilutions.html', {
                 "end_list": end_list
             })
-        if request.POST.get('adjust_dilution_submit'):
-            end_list = end_dilution
-            adj_dil = request.POST.get('adjust_dilution')
-            column = int(request.POST.get('adjust_column'))
-            row = int(request.POST.get('adjust_row'))
-            print(adj_dil, column, row)
-            print(end_list)
-            print(end_list[row][column])
-           # new_list = [[x.replace(end_list[row][column], adj_dil) for x in i] for i in end_list]
-           #  new_list = []
-            for i in range(len(end_list)):
-                # temp1 = []
-                for x in range(len(end_list[i])):
-                    if i == row and x == column:
-                        # x = adj_dil
-                        end_list[row][column].replace(end_list[row][column], adj_dil)
-                    # temp1.append(end_list[i][x])
-                # new_list.append(temp1)
-            # print(new_list)
-            # print(end_list)
-            return render(request, 'Dilutions.html', {
-                "end_list": end_list
-            })
     return render(request, 'Dilutions.html')
 
 def Visualize_data(request):
