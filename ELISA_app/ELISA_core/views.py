@@ -195,7 +195,8 @@ def Dilutions(request):
             return render(request, 'Dilutions.html', {
                 "end_list": end_list
             })
-    return render(request, 'Dilutions.html')
+    return render(request, 'Dilutions.html', {
+        "end_list": end_dilution})
 
 def Visualize_data(request):
     data = Plates.objects.values()
