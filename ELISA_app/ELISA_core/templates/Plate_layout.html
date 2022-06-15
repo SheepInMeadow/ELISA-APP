@@ -8,7 +8,10 @@
     {% csrf_token %}
     <input type="file" name="my_file"/>
     <input type="submit" name="file_submit" value="Upload data"/><br>
-{% if totaal != "" %}
+    {% if check == 'error' %}
+        <p>No file was selected, please try again.</p>
+    {% endif %}
+{% if check == 'go' %}
     ST values of all plates: <input type="number" name="standaard"><br>
     <input type="submit" name="standaard_input" value="Update table">
 {% endif %}
