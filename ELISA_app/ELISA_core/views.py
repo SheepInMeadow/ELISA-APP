@@ -98,10 +98,17 @@ def database(data_string):
     id += 1
 
 totaal = []
+check = ''
 
 def Plate_layout(request):
+    global check
     if request.method == 'POST':
         if request.POST.get('file_submit'):
+            if request.FILES.getlist("my_file") == []:
+                check = 'error'
+                return render(request, 'Plate_layout.html', {
+                    'check': check,
+                })
             excel_file = request.FILES["my_file"]
             wb = openpyxl.load_workbook(excel_file)
             active_sheet = wb.active
@@ -125,8 +132,10 @@ def Plate_layout(request):
                         totaal.append(temp)
                         counter = 0
                         temp = []
+            check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal,
+                'check': check,
             })
         if request.POST.get('standaard_input'):
             values = request.POST.get('standaard')
@@ -135,21 +144,25 @@ def Plate_layout(request):
             for i in totaal:
                 for j in i[2:]:
                     if counter2 != 7:
-                        j[1] = float(values[counter])
-                        j[2] = float(values[counter])
-                        values[counter] = float(values[counter])/2
+                        j[1] = float(values)
+                        j[2] = float(values)
+                        values = float(values)/2
                     elif counter2 == 7:
                         j[1] = '#'
                         j[2] = '#'
                     counter2 += 1
                 counter += 1
+                values = request.POST.get('standaard')
                 counter2 = 0
+            check = 'go'
             return render(request, 'Plate_layout.html', {
             'totaal': totaal,
+            'check': check,
         })
     else:
         return render(request, 'Plate_layout.html', {
             'totaal': totaal,
+            'check': check,
         })
 
 def Dilutions(request):
