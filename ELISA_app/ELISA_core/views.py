@@ -8,36 +8,14 @@ import json
 def Home(request):
     return render(request, 'Home.html')
 
+
 def Input_data(request):
     try:
         if request.method == 'POST':
             if request.POST.get('text_submit'):
-                data = request.POST.get('text_input')
-                if data == '':
-                    return render(request, 'Input_data.html', {
-                        'check': 'text',
-                    })
-                data = data.strip().split('\r\n')
-                data_string = formatting_txt(data, 1)
-                database(data_string)
+                text_data(request)
             if request.POST.get('file_submit'):
-                if request.FILES.getlist('my_file') == []:
-                    return render(request, 'Input_data.html', {
-                        'check': 'file',
-                    })
-                for file in request.FILES.getlist('my_file'):
-                    if str(file).split('.')[1] not in ['txt', 'xlsx']:
-                        return render(request, 'Input_data.html', {
-                            'check': 'extension',
-                        })
-                for file in request.FILES.getlist('my_file'):
-                    if str(file).split('.')[1] == 'txt':
-                        data = file.readlines()
-                        data_string = formatting_txt(data, 2)
-                        database(data_string)
-                    elif str(file).split('.')[1] == 'xlsx':
-                        data_string = formatting_xlsx(file)
-                        database(data_string)
+                file_data(request)
             return render(request, 'Input_data.html', {
                 'check': 'correct',
             })
@@ -47,6 +25,38 @@ def Input_data(request):
         return render(request, 'Input_data.html', {
             'check': 'false',
         })
+
+
+def text_data(request):
+    data = request.POST.get('text_input')
+    if data == '':
+        return render(request, 'Input_data.html', {
+            'check': 'text',
+        })
+    data = data.strip().split('\r\n')
+    data_string = formatting_txt(data, 1)
+    database(data_string)
+
+
+def file_data(request):
+    if request.FILES.getlist('my_file') == []:
+        return render(request, 'Input_data.html', {
+            'check': 'file',
+        })
+    for file in request.FILES.getlist('my_file'):
+        if str(file).split('.')[1] not in ['txt', 'xlsx']:
+            return render(request, 'Input_data.html', {
+                'check': 'extension',
+            })
+    for file in request.FILES.getlist('my_file'):
+        if str(file).split('.')[1] == 'txt':
+            data = file.readlines()
+            data_string = formatting_txt(data, 2)
+            database(data_string)
+        elif str(file).split('.')[1] == 'xlsx':
+            data_string = formatting_xlsx(file)
+            database(data_string)
+
 
 def formatting_txt(data, counter):
     lines = list()
@@ -65,6 +75,7 @@ def formatting_txt(data, counter):
         for j in i:
             data_string += j + "="
     return data_string
+
 
 def formatting_xlsx(file_name):
     wb = openpyxl.load_workbook(file_name)
@@ -85,7 +96,9 @@ def formatting_xlsx(file_name):
             data_string += j + "="
     return data_string
 
+
 id = 1
+
 
 def database(data_string):
     global id
