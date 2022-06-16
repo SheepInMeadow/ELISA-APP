@@ -127,7 +127,10 @@ def Plate_layout(request):
             for row in active_sheet.iter_rows():
                 row_data = list()
                 for cell in row:
-                    row_data.append(str(cell.value))
+                    if type(cell.value) == float:
+                        row_data.append(str(round(cell.value)))
+                    else:
+                        row_data.append(str(cell.value))
                 excel_data.append(row_data)
             temp = []
             global totaal
