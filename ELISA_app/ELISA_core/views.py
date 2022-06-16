@@ -179,7 +179,10 @@ def Plate_layout(request):
             'check': check,
         })
 
+
 end_dilution = []
+
+
 def Dilutions(request):
     global end_dilution
     if request.method == 'POST':
@@ -189,21 +192,7 @@ def Dilutions(request):
             end_list = [["#", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]]
             for i in range(9):
                 temp = []
-                for x in range(13):
-                    if i == 0:
-                        if x == 0:
-                            temp.append(ll[i])
-                        elif x == 1 or x == 2 or x == 3 or x == 8:
-                            temp.append("1")
-                        else:
-                            temp.append(dilution)
-                    else:
-                        if x == 0:
-                            temp.append(ll[i])
-                        elif x == 1 or x == 2:
-                            temp.append("1")
-                        else:
-                            temp.append(dilution)
+                temp = Dilutions_1(i, temp, ll, dilution)
                 end_list.append(temp)
             end_dilution = end_list
             return render(request, 'Dilutions.html', {
@@ -211,6 +200,26 @@ def Dilutions(request):
             })
     return render(request, 'Dilutions.html', {
         "end_list": end_dilution})
+
+
+def Dilutions_1(i, temp, ll, dilution):
+    for x in range(13):
+        if i == 0:
+            if x == 0:
+                temp.append(ll[i])
+            elif x == 1 or x == 2 or x == 3 or x == 8:
+                temp.append("1")
+            else:
+                temp.append(dilution)
+        else:
+            if x == 0:
+                temp.append(ll[i])
+            elif x == 1 or x == 2:
+                temp.append("1")
+            else:
+                temp.append(dilution)
+    return temp
+
 
 def Visualize_data(request):
     data = Plates.objects.values()
