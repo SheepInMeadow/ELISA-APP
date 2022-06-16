@@ -5,39 +5,19 @@ import openpyxl
 import json
 
 # Create your views here.
+
+
 def Home(request):
     return render(request, 'Home.html')
+
 
 def Input_data(request):
     try:
         if request.method == 'POST':
             if request.POST.get('text_submit'):
-                data = request.POST.get('text_input')
-                if data == '':
-                    return render(request, 'Input_data.html', {
-                        'check': 'text',
-                    })
-                data = data.strip().split('\r\n')
-                data_string = formatting_txt(data, 1)
-                database(data_string)
+                text_data(request)
             if request.POST.get('file_submit'):
-                if request.FILES.getlist('my_file') == []:
-                    return render(request, 'Input_data.html', {
-                        'check': 'file',
-                    })
-                for file in request.FILES.getlist('my_file'):
-                    if str(file).split('.')[1] not in ['txt', 'xlsx']:
-                        return render(request, 'Input_data.html', {
-                            'check': 'extension',
-                        })
-                for file in request.FILES.getlist('my_file'):
-                    if str(file).split('.')[1] == 'txt':
-                        data = file.readlines()
-                        data_string = formatting_txt(data, 2)
-                        database(data_string)
-                    elif str(file).split('.')[1] == 'xlsx':
-                        data_string = formatting_xlsx(file)
-                        database(data_string)
+                file_data(request)
             return render(request, 'Input_data.html', {
                 'check': 'correct',
             })
@@ -48,44 +28,75 @@ def Input_data(request):
             'check': 'false',
         })
 
+
+def text_data(request):
+    data = request.POST.get('text_input')
+    if data == '':
+        return render(request, 'Input_data.html', {
+            'check': 'text',
+        })
+    data = data.strip().split('\r\n')
+    data_string = formatting_txt(data, 1)
+    database(data_string)
+
+
+def file_data(request):
+    if request.FILES.getlist('my_file') == []:
+        return render(request, 'Input_data.html', {
+            'check': 'file',
+        })
+    for file in request.FILES.getlist('my_file'):
+        if str(file).split('.')[1] not in ['txt', 'xlsx']:
+            return render(request, 'Input_data.html', {
+                'check': 'extension',
+            })
+    for file in request.FILES.getlist('my_file'):
+        if str(file).split('.')[1] == 'txt':
+            data = file.readlines()
+            data_string = formatting_txt(data, 2)
+            database(data_string)
+        elif str(file).split('.')[1] == 'xlsx':
+            data_string = formatting_xlsx(file)
+            database(data_string)
+
+
 def formatting_txt(data, counter):
-    lines = list()
+    lines, data_string, formatted_data = list(), "", list()
     for i in data[:-1]:
         if counter == 1:
             lines.append(i.strip())
         elif counter == 2:
             lines.append(i.strip().decode('utf-8'))
-    formatted_data = list()
     for j in lines:
         line = j.split('\t')
         formatted_data.append(line)
     formatted_data[1].insert(0, '#')
-    data_string = ""
     for i in formatted_data:
         for j in i:
             data_string += j + "="
     return data_string
 
+
 def formatting_xlsx(file_name):
     wb = openpyxl.load_workbook(file_name)
     active_sheet = wb.active
-    excel_data = list()
+    excel_data, data_string = list(), ""
     for row in active_sheet.iter_rows():
         row_data = list()
         for cell in row:
             row_data.append(str(cell.value))
         excel_data.append(row_data)
-    formatted_data = excel_data
-    del formatted_data[1][0]
-    del formatted_data[0][1:]
-    formatted_data[1].insert(0, '#')
-    data_string = ""
-    for i in formatted_data:
+    del excel_data[1][0]
+    del excel_data[0][1:]
+    excel_data[1].insert(0, '#')
+    for i in excel_data:
         for j in i:
             data_string += j + "="
     return data_string
 
+
 id = 1
+
 
 def database(data_string):
     global id
