@@ -210,6 +210,7 @@ def Visualize_data(request):
     temp = []
     for i in data:
         lines = i['data'].split('=')[:-1]
+        print((float(lines[106]) + float(lines[107]))/2)
         for j in lines[1:]:
             temp.append(j)
             counter += 1
