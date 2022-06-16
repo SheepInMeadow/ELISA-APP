@@ -221,14 +221,25 @@ def Visualize_data(request):
     temp = []
     for i in data:
         lines = i['data'].split('=')[:-1]
-        print((float(lines[106]) + float(lines[107]))/2)
+        number1 = lines[106].replace(',', '.')
+        number2 = lines[107].replace(',', '.')
+        calculation = ((float(number1) + float(number2))/2)
+        mean = round(calculation, 3)
         for j in lines[1:]:
-            temp.append(j)
+            if ',' in j:
+                new = float(j.replace(',', '.')) - mean
+                temp.append(round(new, 3))
+            else:
+                temp.append(j)
             counter += 1
             if counter == 13:
                 nested.append(temp)
                 counter = 0
                 temp = []
+        del nested[8][1]
+        del nested[8][1]
+        nested[8].insert(1, number1) # geeft de ST waarde met ruis weer aan
+        nested[8].insert(2, number2) # als dit niet gewenst is kunnen deze en de twee regels erboven verwijderd worden
         dictionary[teller] = nested
         nested = []
         teller += 1
