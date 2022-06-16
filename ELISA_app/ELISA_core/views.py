@@ -5,6 +5,8 @@ import openpyxl
 import json
 
 # Create your views here.
+
+
 def Home(request):
     return render(request, 'Home.html')
 
@@ -59,18 +61,16 @@ def file_data(request):
 
 
 def formatting_txt(data, counter):
-    lines = list()
+    lines, data_string, formatted_data = list(), "", list()
     for i in data[:-1]:
         if counter == 1:
             lines.append(i.strip())
         elif counter == 2:
             lines.append(i.strip().decode('utf-8'))
-    formatted_data = list()
     for j in lines:
         line = j.split('\t')
         formatted_data.append(line)
     formatted_data[1].insert(0, '#')
-    data_string = ""
     for i in formatted_data:
         for j in i:
             data_string += j + "="
@@ -80,18 +80,16 @@ def formatting_txt(data, counter):
 def formatting_xlsx(file_name):
     wb = openpyxl.load_workbook(file_name)
     active_sheet = wb.active
-    excel_data = list()
+    excel_data, data_string = list(), ""
     for row in active_sheet.iter_rows():
         row_data = list()
         for cell in row:
             row_data.append(str(cell.value))
         excel_data.append(row_data)
-    formatted_data = excel_data
-    del formatted_data[1][0]
-    del formatted_data[0][1:]
-    formatted_data[1].insert(0, '#')
-    data_string = ""
-    for i in formatted_data:
+    del excel_data[1][0]
+    del excel_data[0][1:]
+    excel_data[1].insert(0, '#')
+    for i in excel_data:
         for j in i:
             data_string += j + "="
     return data_string
