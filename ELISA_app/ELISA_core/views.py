@@ -129,14 +129,10 @@ def Plate_layout(request):
             Plate_layout_3(request)
             check = 'go'
             return render(request, 'Plate_layout.html', {
-            'totaal': totaal,
-            'check': check,
-        })
+                'totaal': totaal, 'check': check, })
     else:
         return render(request, 'Plate_layout.html', {
-            'totaal': totaal,
-            'check': check,
-        })
+            'totaal': totaal, 'check': check, })
 
 
 def Plate_layout_1(request):
