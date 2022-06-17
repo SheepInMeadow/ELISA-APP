@@ -1,0 +1,16 @@
+#opties {
+    position: relative;
+    float: right;
+}
+
+#table {
+    display: inline-block;
+}
+
+#number_top {
+    width: 70px;
+}
+
+#number_bottom {
+    width: 70px;
+}

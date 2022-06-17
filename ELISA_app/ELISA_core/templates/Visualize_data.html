@@ -6,7 +6,8 @@
 {% block content %}
 {% for key, value_list in dictionary.items %}
     <div id="combined">
-    <table border="1">
+     <div id="table">
+    <table border="1" class="raw_data">
         <thead>
             <td>{{key}}</td>
         </thead>
@@ -18,9 +19,10 @@
         </tr>
         {% endfor %}
     </table>
+    </div>
     <div id="opties">
-        <p>Linear part: point used well</p>
-        Top:<input type="number">
+        <p>&nbsp&nbsp&nbsp&nbsp&nbsp&nbspLinear part: point used well</p>
+        &nbsp&nbsp&nbsp&nbsp&nbsp&nbspTop:<input type="number" id="number_top">
         <select name="top" id="top">
           <option value="7">7</option>
           <option value="6">6</option>
@@ -40,7 +42,7 @@
           <option value="G">G</option>
        </select>
         <br>
-        Bottom:<input type="number">
+        Bottom:<input type="number" id="number_bottom">
         <select name="bottom" id="bottom">
               <option value="1">1</option>
               <option value="2">2</option>
