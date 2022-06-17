@@ -2,7 +2,7 @@
 
 {% block title %} Dillutions {% endblock %}
 {% block header %} Dillutions
-<link rel="stylesheet" type="text/css" href="{% static 'css/home.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'css/Dilutions.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -10,7 +10,7 @@
         {% csrf_token %}
         Give the dilution: <input type="number" name="dilution">
         <input type="submit" name="dilution_submit"><br><br>
-        <table border="1">
+        <table>
             {% for x in end_list %}
                 <tr>
                 {% for i in x %}
