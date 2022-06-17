@@ -108,91 +108,103 @@ def database(data_string):
     )
     id += 1
 
+
 totaal = []
 check = ''
+
 
 def Plate_layout(request):
     global check
     if request.method == 'POST':
         if request.POST.get('file_submit'):
-            if request.FILES.getlist("my_file") == []:
-                check = 'error'
-                return render(request, 'Plate_layout.html', {
-                    'check': check,
-                })
-            excel_file = request.FILES["my_file"]
-            wb = openpyxl.load_workbook(excel_file)
-            active_sheet = wb.active
-            excel_data = list()
-            for row in active_sheet.iter_rows():
-                row_data = list()
-                for cell in row:
-                    if type(cell.value) == float:
-                        row_data.append(str(round(cell.value)))
-                    else:
-                        row_data.append(str(cell.value))
-                excel_data.append(row_data)
-            temp = []
+            excel_data = Plate_layout_1(request)
             global totaal
-            counter = 0
-            for i in excel_data:
-                i = [e for e in i if e not in ('None')]
-                if len(i) != 0:
-                    if counter == 1:
-                        i.insert(0, '#')
-                    temp.append(i)
-                    counter += 1
-                    if counter == 10:
-                        totaal.append(temp)
-                        counter = 0
-                        temp = []
+            totaal = Plate_layout_2(excel_data)
             check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal,
                 'check': check,
             })
         if request.POST.get('standaard_input'):
-            values = request.POST.get('standaard')
-            counter = 0
-            counter2 = 0
-            for i in totaal:
-                for j in i[2:]:
-                    if counter2 != 7:
-                        j[1] = float(values)
-                        j[2] = float(values)
-                        values = float(values)/2
-                    elif counter2 == 7:
-                        j[1] = '#'
-                        j[2] = '#'
-                    counter2 += 1
-                counter += 1
-                values = request.POST.get('standaard')
-                counter2 = 0
+            Plate_layout_3(request)
             check = 'go'
             return render(request, 'Plate_layout.html', {
-            'totaal': totaal,
-            'check': check,
-        })
+                'totaal': totaal, 'check': check, })
     else:
         return render(request, 'Plate_layout.html', {
-            'totaal': totaal,
+            'totaal': totaal, 'check': check, })
+
+
+def Plate_layout_1(request):
+    if request.FILES.getlist("my_file") == []:
+        check = 'error'
+        return render(request, 'Plate_layout.html', {
             'check': check,
         })
+    excel_file = request.FILES["my_file"]
+    wb = openpyxl.load_workbook(excel_file)
+    active_sheet = wb.active
+    excel_data = list()
+    for row in active_sheet.iter_rows():
+        row_data = list()
+        for cell in row:
+            if type(cell.value) == float:
+                row_data.append(str(round(cell.value)))
+            else:
+                row_data.append(str(cell.value))
+        excel_data.append(row_data)
+    return excel_data
+
+
+def Plate_layout_2(excel_data):
+    temp, counter = [], 0
+    for i in excel_data:
+        i = [e for e in i if e not in ('None')]
+        if len(i) != 0:
+            if counter == 1:
+                i.insert(0, '#')
+            temp.append(i)
+            counter += 1
+            if counter == 10:
+                totaal.append(temp)
+                counter = 0
+                temp = []
+    return totaal
+
+
+def Plate_layout_3(request):
+    values = request.POST.get('standaard')
+    counter, counter2 = 0, 0
+    for i in totaal:
+        for j in i[2:]:
+            if counter2 != 7:
+                j[1] = float(values)
+                j[2] = float(values)
+                values = float(values) / 2
+            elif counter2 == 7:
+                j[1] = '#'
+                j[2] = '#'
+            counter2 += 1
+        counter += 1
+        values = request.POST.get('standaard')
+        counter2 = 0
 
 
 end_dilution = []
 
-
+# je kan hier nog een enkele waarde aanpassen door per regel te checken
+# wat voor letter is ingevoerd en dan de positie pakken
 def Dilutions(request):
     global end_dilution
     if request.method == 'POST':
         if request.POST.get('dilution_submit'):
             dilution = request.POST.get('dilution')
-            ll = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
-            end_list = [["#", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]]
+            row_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+            end_list = [["#", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+                         "10", "11", "12"]]
             for i in range(9):
                 temp = []
-                temp = Dilutions_1(i, temp, ll, dilution)
+                temp = Dilutions_1(i, temp, row_names, dilution)
                 end_list.append(temp)
             end_dilution = end_list
             return render(request, 'Dilutions.html', {
@@ -202,18 +214,18 @@ def Dilutions(request):
         "end_list": end_dilution})
 
 
-def Dilutions_1(i, temp, ll, dilution):
+def Dilutions_1(i, temp, row_names, dilution):
     for x in range(13):
         if i == 0:
             if x == 0:
-                temp.append(ll[i])
+                temp.append(row_names[i])
             elif x == 1 or x == 2 or x == 3 or x == 8:
                 temp.append("1")
             else:
                 temp.append(dilution)
         else:
             if x == 0:
-                temp.append(ll[i])
+                temp.append(row_names[i])
             elif x == 1 or x == 2:
                 temp.append("1")
             else:
