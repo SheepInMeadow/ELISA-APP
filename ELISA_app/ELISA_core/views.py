@@ -2,10 +2,9 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from .models import Plates
 import openpyxl
-import json
-
-# Create your views here.
-
+import matplotlib.pyplot as plt
+import numpy as np
+import math
 
 def Home(request):
     return render(request, 'Home.html')
@@ -246,16 +245,30 @@ def Visualize_data(request):
                 nested.append(temp)
                 counter = 0
                 temp = []
-        del nested[8][1]
-        del nested[8][1]
-        nested[8].insert(1, number1) # geeft de ST waarde met ruis weer aan
-        nested[8].insert(2, number2) # als dit niet gewenst is kunnen deze en de twee regels erboven verwijderd worden
         dictionary[teller] = nested
         nested = []
         teller += 1
+    if totaal != []:
+        create_graph(dictionary)
     return render(request, 'Visualize_data.html', {
         'dictionary': dictionary,
     })
+
+def create_graph(dictionary):
+    conc = totaal[0][2][1]
+    x_list = [conc]
+    for i in range(6):
+        conc = conc/2
+        x_list.append(conc)
+    y_list = []
+    temp = []
+    for values in dictionary.values():
+        for elements in values[1:-1]:
+            mean = (float(elements[1] + float(elements[2]))/2)
+            temp.append(round(mean, 3))
+        y_list.append(temp)
+        temp = []
+
 
 def Cut_off(request):
     return render(request, 'Cut_off.html')
