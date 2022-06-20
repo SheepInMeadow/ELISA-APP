@@ -4,15 +4,20 @@
 {% block header %} Dillutions {% endblock %}
 
 {% block content %}
+    {% load static %}
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'css/Dilutions.css' %}">
     <form method="post">
         {% csrf_token %}
-        Give the dilution: <input type="number" name="dilution">
-        <input type="submit" name="dilution_submit"><br><br>
-        <table>
+        <div class="dil_text">
+            Give the dilution: <input type="number" name="dilution" class="dil">
+            <input type="submit" name="dilution_submit" class="dil_submit"><br><br>
+        </div>
+        <table class="dil_table">
             {% for x in end_list %}
-                <tr>
+                <tr class="dil_tr">
                 {% for i in x %}
-                    <td>{{i}}</td>
+                    <td class="dil_td">{{i}}</td>
                 {% endfor %}
                 </tr>
             {% endfor %}
