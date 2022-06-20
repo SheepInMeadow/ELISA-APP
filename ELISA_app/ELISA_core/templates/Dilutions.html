@@ -4,6 +4,9 @@
 {% block header %} Dillutions {% endblock %}
 
 {% block content %}
+    {% load static %}
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'css/Dilutions.css' %}">
     <form method="post">
         {% csrf_token %}
         <div class="dil_text">

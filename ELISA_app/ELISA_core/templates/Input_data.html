@@ -4,6 +4,9 @@
 {% block header %} Input Data {% endblock %}
 
 {% block content %}
+    {% load static %}
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'css/Input_data.css' %}">
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="input_text">Paste your data here:</div><br>

@@ -1,37 +1,44 @@
 .input_file {
   font-size: 15pt;
   margin-left: 10px;
+  font-family: "Arial", serif;
 }
 
 .input_button_file {
   font-size: 15pt;
+  font-family: "Arial", serif;
 }
 
 .input_button_text {
   font-size: 15pt;
   position: relative;
   bottom: 8px;
+  font-family: "Arial", serif;
 }
 
 .input_text {
   margin-left: 10px;
   margin-top: 5%;
   font-size: 15pt;
+  font-family: "Arial", serif;
 }
 
 .input_text_input {
   margin-left: 10px;
   font-size: 15px;
+  font-family: "Arial", serif;
 }
 
 .message_fail {
   margin-left: 10px;
   font-size: 21px;
   color: red;
+  font-family: "Arial", serif;
 }
 
 .message_succes {
   margin-left: 10px;
   font-size: 21px;
   color: green;
+  font-family: "Arial", serif;
 }
