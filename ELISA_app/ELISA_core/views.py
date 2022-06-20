@@ -1,17 +1,12 @@
-from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from .models import Plates
 import openpyxl
 import seaborn as sns
-import matplotlib.pyplot as plt
 import pandas as pd
-import json
-
-# Create your views here.
-
 import matplotlib.pyplot as plt
 import numpy as np
-import math
+import scipy.optimize as optimization
+from matplotlib.ticker import ScalarFormatter
 
 def Home(request):
     return render(request, 'Home.html')
@@ -268,16 +263,17 @@ def Visualize_data(request):
         nested = []
         teller += 1
     if totaal != []:
-        create_graph(dictionary)
+        name_list = create_graph(dictionary)
     return render(request, 'Visualize_data.html', {
         'dictionary': dictionary,
+        'name_list': name_list,
     })
 
 def create_graph(dictionary):
     conc = totaal[0][2][1]
     x_list = [conc]
     for i in range(6):
-        conc = conc/2
+        conc = float(conc)/2
         x_list.append(conc)
     y_list = []
     temp = []
@@ -287,6 +283,30 @@ def create_graph(dictionary):
             temp.append(round(mean, 3))
         y_list.append(temp)
         temp = []
+    name_list = []
+    counter = 1
+    for i in y_list:
+        guess = [1, 1, 1, 1]
+        params, params_coveriance = optimization.curve_fit(formula, x_list, i, guess)
+        x_min, x_max = np.amin(x_list), np.amax(x_list)
+        xs = np.linspace(x_min, x_max, 1000)
+        plt.scatter(x_list, i)
+        plt.plot(xs, formula(xs, *params))
+        plt.xscale('log')
+        plt.grid()
+        ax = plt.gca()
+        plt.xticks([1.0, 10, 100])
+        ax.xaxis.set_major_formatter(ScalarFormatter())
+        name = 'Plate_' + str(counter) + '.png'
+        name_list.append(name)
+        counter += 1
+        plt.savefig('ELISA_core/static/images/' + str(name))
+        plt.close()
+    return name_list
+
+def formula(x, A, B, C, D):
+    E = 1
+    return D + (A - D) / ((1.0 + ((x / C) ** (B) ** (E))))
 
 
 def Cut_off(request):
