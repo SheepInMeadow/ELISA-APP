@@ -2,6 +2,13 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from .models import Plates
 import openpyxl
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+import json
+
+# Create your views here.
+
 import matplotlib.pyplot as plt
 import numpy as np
 import math
@@ -231,10 +238,11 @@ def Dilutions_1(i, temp, row_names, dilution):
                 temp.append(dilution)
     return temp
 
+dictionary = {}
 
 def Visualize_data(request):
+    global dictionary
     data = Plates.objects.values()
-    dictionary = {}
     teller = 1
     counter = 0
     nested = []
@@ -282,6 +290,23 @@ def create_graph(dictionary):
 
 
 def Cut_off(request):
+    cut_dict = {}
+    cut_data = []
+    cut_data2 = []
+    for i in dictionary[3][1:]:
+        for g in i[3:8]:
+            cut_data.append(g)
+        for j in i[8:]:
+            cut_data2.append(j)
+    cut_data.pop(0)
+    cut_data2.pop(0)
+    cut_dict["OD"] = cut_data
+    cut_dict["non_M"] = cut_data2
+    df = pd.DataFrame(data=cut_dict)
+    ax = sns.swarmplot(data=df, y="OD")
+    ax = sns.boxplot(data=df, y="OD", color='white')
+    plt.savefig('foo.png')
+
     return render(request, 'Cut_off.html')
 
 def Intermediate_result(request):
