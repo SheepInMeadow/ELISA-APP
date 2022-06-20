@@ -6,26 +6,26 @@
 {% block content %}
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <p>Paste your data here:</p>
-        <textarea rows="20" cols="100" name="text_input"></textarea>
-        <input type="submit" name="text_submit" value="Upload data"/>
+        <div class="input_text">Paste your data here:</div><br>
+        <textarea rows="12" cols="100" name="text_input" class="input_text_input"></textarea>
+        <input type="submit" name="text_submit" value="Upload data" class="input_button_text"/>
         <br><br>
-        <input type="file" name="my_file" multiple/>
-        <input type="submit" name="file_submit" value="Upload data"/>
+        <input type="file" name="my_file" class="input_file" multiple/>
+        <input type="submit" name="file_submit" value="Upload data" class="input_button_file"/>
     </form>
     {% if check == 'text' %}
-        <p>No data was found in the textarea, please try again.</p>
+        <p class="message_fail">No data was found in the textarea, please try again.</p>
     {% endif %}
     {% if check == 'file' %}
-        <p>No files were selected, please try again.</p>
+        <p class="message_fail">No files were selected, please try again.</p>
     {% endif %}
     {% if check == 'correct' %}
-        <p>Data was succesfully uploaded.</p>
+        <p class="message_succes">Data was succesfully uploaded.</p>
     {% endif %}
     {% if check == 'extension' %}
-        <p>Wrong file(s) were submitted, please try again. (allowed file types are .txt and .xlsx)</p>
+        <p class="message_fail">Wrong file(s) were submitted, please try again. (allowed file types are .txt and .xlsx)</p>
     {% endif %}
     {% if check == 'false' %}
-        <p>Input was not properly formatted, please try again.</p>
+        <p class="message_fail">Input was not properly formatted, please try again.</p>
     {% endif %}
 {% endblock %}
