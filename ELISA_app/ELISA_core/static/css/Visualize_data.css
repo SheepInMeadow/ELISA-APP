@@ -1,10 +1,23 @@
-#opties {
-    position: relative;
-    float: right;
-}
-
 #table {
     display: inline-block;
+    float: left;
+}
+
+#graph {
+    position: relative;
+    float: left;
+}
+
+#opties {
+    position: relative;
+    float: left;
+}
+
+#checkboxes {
+    position: relative;
+    float: right;
+    margin-top: 5%;
+    margin-left: 20px;
 }
 
 #number_top {
@@ -13,4 +26,10 @@
 
 #number_bottom {
     width: 70px;
+}
+
+#Healthydonor {
+    position: relative;
+    bottom: 0;
+    right: 5px;
 }
