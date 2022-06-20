@@ -6,8 +6,10 @@
 {% block content %}
     <form method="post">
         {% csrf_token %}
-        Give the dilution: <input type="number" name="dilution">
-        <input type="submit" name="dilution_submit"><br><br>
+        <div class="text">
+            Give the dilution: <input type="number" name="dilution" class="dilution">
+            <input type="submit" name="dilution_submit" class="dilution_submit"><br><br>
+        </div>
         <table>
             {% for x in end_list %}
                 <tr>
