@@ -288,7 +288,7 @@ def Cut_off(request):
     df = pd.DataFrame(data=cut_dict)
     ax = sns.swarmplot(data=df, y="OD")
     ax = sns.boxplot(data=df, y="OD", color='white')
-    plt.savefig('foo.png')
+    plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')
 
     return render(request, 'Cut_off.html')
 
