@@ -4,5 +4,27 @@
 {% block header %} Home {% endblock %}
 
 {% block content %}
-    content here
+
+    {% load static %}
+        <link rel="stylesheet" type="text/css"
+          href="{% static 'css/home.css' %}">
+
+    <div class="wrapper" style="overflow: hidden; background-color: white">
+        <div class="infocard">
+            <p class="title">First DIV</p>
+            Second Line
+        </div>
+        <div class="infocard">
+            <p class="title">Second DIV</p>
+            Second Line
+        </div>
+    </div>
+
+    <div class="wrapper" style="overflow: hidden; background-color: white">
+        <div class="creditcard">
+            <p class="title">Credits & Contact</p>
+            Freek Vonk (+31612345678)
+        </div>
+    </div>
+
 {% endblock %}
