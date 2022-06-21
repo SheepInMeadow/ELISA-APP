@@ -4,5 +4,20 @@
 {% block header %} Cut-off {% endblock %}
 
 {% block content %}
-<img id="af1" src="static/images/swarmplot.png">
+<img id="af1" src="static/images/swarmplot.png"><br>
+<form method="POST">
+    {% csrf_token %}
+    Fill in the fields to complete the formula for determining the outliers value:<br>
+    <p>outliers = <input type="number" name="input1"> * {{ mean }} + <input type="number" name="input2"> * {{ std }}</p>
+    <input type="submit" value="create new swarm plot">
+</form>
+{% if check == 'true' %}
+    <img id="af2" src="static/images/swarmplot2.png">
+    <form method="POST">
+        {% csrf_token %}
+        Fill in the fields to complete the formula for determining the cut-off value:<br>
+        <p>cut-off = <input type="number" name="input3"> * {{ mean2 }} + <input type="number" name="input4"> * {{ std2 }}</p>
+        <input type="submit" value="Submit cut-off">
+    </form>
+{% endif %}
 {% endblock %}

@@ -11,14 +11,14 @@
     {% csrf_token %}
     <div class="plate_top">
         <input type="file" name="my_file" class="plate_file"/>
-        <input type="submit" name="file_submit" value="Upload data" class="plate_button"/><br>
+        <input type="submit" name="file_submit" value="Upload data" class="plate_button"/><br><br>
         {% if check == 'error' %}
             <p class="message_fail">No file was selected, please try again.</p>
         {% endif %}
     </div>
 {% if check == 'go' %}
     <div class="plate_st_text">
-        ST values of all plates: <input type="number" name="standaard" class="plate_st_input"><br>
+        ST values of all plates: <input type="number" name="standaard" class="plate_st_input"><br><br>
         <input type="submit" name="standaard_input" value="Update table" class="plate_table_button">
     </div>
 {% endif %}

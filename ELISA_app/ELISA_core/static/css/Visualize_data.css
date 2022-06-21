@@ -17,7 +17,7 @@
 #checkboxes {
     position: relative;
     float: right;
-    margin-top: 5%;
+    margin-top: 1.3%;
     margin-left: 20px;
 }
 
@@ -31,6 +31,10 @@
 
 #Healthydonor {
     position: fixed;
-    bottom: 10px;
-    right: 10px;
+    bottom: 2%;
+    right: 2%;
+}
+
+#spacing {
+    margin-left: 5px;
 }
