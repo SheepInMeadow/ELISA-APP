@@ -1,0 +1,35 @@
+.infocard {
+    width: 400px;
+    float:left;
+    height:300px;
+    background:whitesmoke;
+    margin:5px;
+    box-shadow: 0 0 5px black;
+    font-family: "Arial", serif;
+    border-radius: 10px 10px 10px 10px;
+    padding: 10px;
+    display:inline-block
+}
+
+.infocard p.title {
+    text-align: center;
+    font-size: 25px;
+}
+
+.creditcard {
+    width: 830px;
+    float:left;
+    height:300px;
+    background:whitesmoke;
+    margin:10px;
+    box-shadow: 0 0 5px black;
+    font-family: "Arial", serif;
+    border-radius: 10px 10px 10px 10px;
+    padding: 5px;
+    display:inline-block
+}
+
+.creditcard p.title {
+    text-align: center;
+    font-size: 25px;
+}
