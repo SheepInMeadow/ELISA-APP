@@ -201,10 +201,10 @@ def Dilutions(request):
     if request.method == 'POST':
         if request.POST.get('dilution_submit'):
             dilution = request.POST.get('dilution')
-            row_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+            row_names = ["A", "B", "C", "D", "E", "F", "G", "H"]
             end_list = [["#", "1", "2", "3", "4", "5", "6", "7", "8", "9",
                          "10", "11", "12"]]
-            for i in range(9):
+            for i in range(8):
                 temp = []
                 temp = Dilutions_1(i, temp, row_names, dilution)
                 end_list.append(temp)
@@ -329,6 +329,8 @@ mean2 = 0
 std2 = 0
 check_cut_off = 'false'
 cut_data = []
+outlier_value = 0.0
+cut_off_value = 0.0
 
 def Cut_off(request):
     global mean
@@ -337,32 +339,51 @@ def Cut_off(request):
     global std2
     global cut_data
     global check_cut_off
+    global outlier_value
+    global cut_off_value
     cut_dict = {}
     if request.method == 'POST':
-        input1 = request.POST.get('input1')
-        input2 = request.POST.get('input2')
-        outliers = (float(input1) * mean) + (float(input2) * std)
-        outliers = round(outliers, 3)
-        new_y_list = []
-        for data in cut_data:
-            if data < outliers:
-                new_y_list.append(data)
-        cut_dict['New_OD'] = new_y_list
-        mean2 = round(statistics.mean(new_y_list), 3)
-        std2 = round(statistics.stdev(new_y_list), 3)
-        df = pd.DataFrame(data=cut_dict)
-        ax = sns.swarmplot(data=df, y="New_OD")
-        ax = sns.boxplot(data=df, y="New_OD", color='white')
-        plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')
-        plt.close()
-        check_cut_off = 'true'
-        return render(request, 'Cut_off.html', {
-            'mean': mean,
-            'std': std,
-            'mean2': mean2,
-            'std2': std2,
-            'check': check_cut_off,
-        })
+        if request.POST.get('outlier_submit'):
+            input1 = request.POST.get('input1')
+            input2 = request.POST.get('input2')
+            outlier_value = (float(input1) * mean) + (float(input2) * std)
+            outlier_value = round(outlier_value, 3)
+            new_y_list = []
+            for data in cut_data:
+                if data < outlier_value:
+                    new_y_list.append(data)
+            cut_dict['New_OD'] = new_y_list
+            mean2 = round(statistics.mean(new_y_list), 3)
+            std2 = round(statistics.stdev(new_y_list), 3)
+            df = pd.DataFrame(data=cut_dict)
+            ax = sns.swarmplot(data=df, y="New_OD")
+            ax = sns.boxplot(data=df, y="New_OD", color='white')
+            plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')
+            plt.close()
+            check_cut_off = 'true'
+            return render(request, 'Cut_off.html', {
+                'mean': mean,
+                'std': std,
+                'mean2': mean2,
+                'std2': std2,
+                'check': check_cut_off,
+                'outlier_value': outlier_value,
+                'cut_off_value': cut_off_value,
+            })
+        elif request.POST.get('cut_off_submit'):
+            input3 = request.POST.get('input3')
+            input4 = request.POST.get('input4')
+            cut_off_value = (float(input3) * mean2) + (float(input4) * std2)
+            cut_off_value = round(cut_off_value, 3)
+            return render(request, 'Cut_off.html', {
+                'mean': mean,
+                'std': std,
+                'mean2': mean2,
+                'std2': std2,
+                'check': check_cut_off,
+                'outlier_value': outlier_value,
+                'cut_off_value': cut_off_value,
+            })
     elif cut_data == []:
         for i in dictionary[int(HD)][1:]:
             for g in i[3:8]:
@@ -380,6 +401,8 @@ def Cut_off(request):
             'mean': mean,
             'std': std,
             'check': check_cut_off,
+            'outlier_value': outlier_value,
+            'cut_off_value': cut_off_value,
         })
     return render(request, 'Cut_off.html', {
         'mean': mean,
@@ -387,6 +410,8 @@ def Cut_off(request):
         'mean2': mean2,
         'std2': std2,
         'check': check_cut_off,
+        'outlier_value': outlier_value,
+        'cut_off_value': cut_off_value,
     })
 
 def Intermediate_result(request):

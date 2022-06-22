@@ -1,0 +1,13 @@
+.spacing {
+    margin-left: 2%;
+}
+
+.left {
+    position: relative;
+    float: left;
+}
+
+.right {
+    position: relative;
+    float: right;
+}

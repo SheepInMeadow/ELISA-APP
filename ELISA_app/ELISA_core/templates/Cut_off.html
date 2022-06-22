@@ -4,20 +4,32 @@
 {% block header %} Cut-off {% endblock %}
 
 {% block content %}
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/Cut-off.css' %}">
+<div class="left">
 <img id="af1" src="static/images/swarmplot.png"><br>
 <form method="POST">
     {% csrf_token %}
-    Fill in the fields to complete the formula for determining the outliers value:<br>
-    <p>outliers = <input type="number" name="input1"> * {{ mean }} + <input type="number" name="input2"> * {{ std }}</p>
-    <input type="submit" value="create new swarm plot">
+    <p class="spacing">Fill in the fields to complete the formula for determining the outlier value:</p>
+    <p class="spacing">Outlier = <input type="number" name="input1" value="1"> * {{ mean }} + <input type="number" name="input2" value="4"> * {{ std }}</p>
+    {% if outlier_value != 0.0 %}
+        <p class="spacing">Outlier value: {{outlier_value}}</p>
+    {% endif %}
+    <input type="submit" value="create new swarm plot" class="spacing" name="outlier_submit">
 </form>
+</div>
 {% if check == 'true' %}
+<div class="right">
     <img id="af2" src="static/images/swarmplot2.png">
     <form method="POST">
         {% csrf_token %}
-        Fill in the fields to complete the formula for determining the cut-off value:<br>
-        <p>cut-off = <input type="number" name="input3"> * {{ mean2 }} + <input type="number" name="input4"> * {{ std2 }}</p>
-        <input type="submit" value="Submit cut-off">
+        <p class="spacing">Fill in the fields to complete the formula for determining the cut-off value:</p>
+        <p class="spacing">cut-off = <input type="number" name="input3" value="1"> * {{ mean2 }} + <input type="number" name="input4" value="2"> * {{ std2 }}</p>
+        {% if cut_off_value != 0.0 %}
+            <p class="spacing">Cut-off value: {{cut_off_value}}</p>
+        {% endif %}
+        <input type="submit" value="Submit cut-off" class="spacing" name="cut_off_submit">
     </form>
 {% endif %}
+</div>
 {% endblock %}

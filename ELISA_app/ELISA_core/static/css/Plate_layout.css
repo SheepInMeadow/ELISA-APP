@@ -1,6 +1,6 @@
 .plate_top {
-    margin-top: 30px;
-    margin-left: 10px;
+    margin-top: 2%;
+    margin-left: 2%;
 }
 
 .plate_file {
@@ -14,14 +14,14 @@
 }
 
 .message_fail {
-    margin-left: 10px;
+    margin-left: 2%;
     font-size: 15px;
     color: red;
     font-family: "Arial", serif;
 }
 
 .plate_st_text {
-    margin-left: 10px;
+    margin-left: 2%;
     font-size: 20px;
     font-family: "Arial", serif;
 }
@@ -41,8 +41,8 @@ table, td {
 }
 
 table {
-    margin-top: 40px;
-    margin-left: 10px;
+    margin-top: 3%;
+    margin-left: 2%;
     color: #333;
     background: white;
     border: 1px solid grey;
