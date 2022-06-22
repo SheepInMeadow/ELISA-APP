@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
+import statistics
 
 def Home(request):
     return render(request, 'Home.html')
@@ -234,9 +235,23 @@ def Dilutions_1(i, temp, row_names, dilution):
     return temp
 
 dictionary = {}
+HD = ''
+delete = []
+top = []
+bottom = []
+
 
 def Visualize_data(request):
     global dictionary
+    global HD
+    global delete
+    global top
+    global bottom
+    if request.method == 'POST':
+        HD = request.POST['HD']
+        top = request.POST.getlist('top')
+        bottom = request.POST.getlist('bottom')
+        delete = request.POST.getlist('delete')
     data = Plates.objects.values()
     teller = 1
     counter = 0
@@ -308,26 +323,71 @@ def formula(x, A, B, C, D):
     E = 1
     return D + (A - D) / ((1.0 + ((x / C) ** (B) ** (E))))
 
+mean = 0
+std = 0
+mean2 = 0
+std2 = 0
+check_cut_off = 'false'
+cut_data = []
 
 def Cut_off(request):
+    global mean
+    global std
+    global mean2
+    global std2
+    global cut_data
+    global check_cut_off
     cut_dict = {}
-    cut_data = []
-    cut_data2 = []
-    for i in dictionary[3][1:]:
-        for g in i[3:8]:
-            cut_data.append(g)
-        for j in i[8:]:
-            cut_data2.append(j)
-    cut_data.pop(0)
-    cut_data2.pop(0)
-    cut_dict["OD"] = cut_data
-    cut_dict["non_M"] = cut_data2
-    df = pd.DataFrame(data=cut_dict)
-    ax = sns.swarmplot(data=df, y="OD")
-    ax = sns.boxplot(data=df, y="OD", color='white')
-    plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')
-
-    return render(request, 'Cut_off.html')
+    if request.method == 'POST':
+        input1 = request.POST.get('input1')
+        input2 = request.POST.get('input2')
+        outliers = (float(input1) * mean) + (float(input2) * std)
+        outliers = round(outliers, 3)
+        new_y_list = []
+        for data in cut_data:
+            if data < outliers:
+                new_y_list.append(data)
+        cut_dict['New_OD'] = new_y_list
+        mean2 = round(statistics.mean(new_y_list), 3)
+        std2 = round(statistics.stdev(new_y_list), 3)
+        df = pd.DataFrame(data=cut_dict)
+        ax = sns.swarmplot(data=df, y="New_OD")
+        ax = sns.boxplot(data=df, y="New_OD", color='white')
+        plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')
+        plt.close()
+        check_cut_off = 'true'
+        return render(request, 'Cut_off.html', {
+            'mean': mean,
+            'std': std,
+            'mean2': mean2,
+            'std2': std2,
+            'check': check_cut_off,
+        })
+    elif cut_data == []:
+        for i in dictionary[int(HD)][1:]:
+            for g in i[3:8]:
+                cut_data.append(g)
+        cut_data.pop(0)
+        cut_dict["OD"] = cut_data
+        mean = round(statistics.mean(cut_data), 3)
+        std = round(statistics.stdev(cut_data), 3)
+        df = pd.DataFrame(data=cut_dict)
+        ax = sns.swarmplot(data=df, y="OD")
+        ax = sns.boxplot(data=df, y="OD", color='white')
+        plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')
+        plt.close()
+        return render(request, 'Cut_off.html', {
+            'mean': mean,
+            'std': std,
+            'check': check_cut_off,
+        })
+    return render(request, 'Cut_off.html', {
+        'mean': mean,
+        'std': std,
+        'mean2': mean2,
+        'std2': std2,
+        'check': check_cut_off,
+    })
 
 def Intermediate_result(request):
     return render(request, 'Intermediate_result.html')
