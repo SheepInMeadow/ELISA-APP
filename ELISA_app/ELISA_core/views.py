@@ -242,47 +242,52 @@ bottom = []
 
 
 def Visualize_data(request):
-    global dictionary
-    global HD
-    global delete
-    global top
-    global bottom
-    if request.method == 'POST':
-        HD = request.POST['HD']
-        top = request.POST.getlist('top')
-        bottom = request.POST.getlist('bottom')
-        delete = request.POST.getlist('delete')
-    data = Plates.objects.values()
-    teller = 1
-    counter = 0
-    nested = []
-    temp = []
-    for i in data:
-        lines = i['data'].split('=')[:-1]
-        number1 = lines[106].replace(',', '.')
-        number2 = lines[107].replace(',', '.')
-        calculation = ((float(number1) + float(number2))/2)
-        mean = round(calculation, 3)
-        for j in lines[1:]:
-            if ',' in j:
-                new = float(j.replace(',', '.')) - mean
-                temp.append(round(new, 3))
-            else:
-                temp.append(j)
-            counter += 1
-            if counter == 13:
-                nested.append(temp)
-                counter = 0
-                temp = []
-        dictionary[teller] = nested
+    try:
+        global dictionary
+        global HD
+        global delete
+        global top
+        global bottom
+        if request.method == 'POST':
+            HD = request.POST['HD']
+            top = request.POST.getlist('top')
+            bottom = request.POST.getlist('bottom')
+            delete = request.POST.getlist('delete')
+        data = Plates.objects.values()
+        teller = 1
+        counter = 0
         nested = []
-        teller += 1
-    if totaal != []:
-        name_list = create_graph(dictionary)
-    return render(request, 'Visualize_data.html', {
-        'dictionary': dictionary,
-        'name_list': name_list,
-    })
+        temp = []
+        for i in data:
+            lines = i['data'].split('=')[:-1]
+            number1 = lines[106].replace(',', '.')
+            number2 = lines[107].replace(',', '.')
+            calculation = ((float(number1) + float(number2))/2)
+            mean = round(calculation, 3)
+            for j in lines[1:]:
+                if ',' in j:
+                    new = float(j.replace(',', '.')) - mean
+                    temp.append(round(new, 3))
+                else:
+                    temp.append(j)
+                counter += 1
+                if counter == 13:
+                    nested.append(temp)
+                    counter = 0
+                    temp = []
+            dictionary[teller] = nested
+            nested = []
+            teller += 1
+        if totaal != []:
+            name_list = create_graph(dictionary)
+        return render(request, 'Visualize_data.html', {
+            'dictionary': dictionary,
+            'name_list': name_list,
+        })
+    except:
+        return render(request, 'Error.html', {
+            'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the Plate Layout page.',
+        })
 
 def create_graph(dictionary):
     conc = totaal[0][2][1]
@@ -333,86 +338,91 @@ outlier_value = 0.0
 cut_off_value = 0.0
 
 def Cut_off(request):
-    global mean
-    global std
-    global mean2
-    global std2
-    global cut_data
-    global check_cut_off
-    global outlier_value
-    global cut_off_value
-    cut_dict = {}
-    if request.method == 'POST':
-        if request.POST.get('outlier_submit'):
-            input1 = request.POST.get('input1')
-            input2 = request.POST.get('input2')
-            outlier_value = (float(input1) * mean) + (float(input2) * std)
-            outlier_value = round(outlier_value, 3)
-            new_y_list = []
-            for data in cut_data:
-                if data < outlier_value:
-                    new_y_list.append(data)
-            cut_dict['New_OD'] = new_y_list
-            mean2 = round(statistics.mean(new_y_list), 3)
-            std2 = round(statistics.stdev(new_y_list), 3)
+    try:
+        global mean
+        global std
+        global mean2
+        global std2
+        global cut_data
+        global check_cut_off
+        global outlier_value
+        global cut_off_value
+        cut_dict = {}
+        if request.method == 'POST':
+            if request.POST.get('outlier_submit'):
+                input1 = request.POST.get('input1')
+                input2 = request.POST.get('input2')
+                outlier_value = (float(input1) * mean) + (float(input2) * std)
+                outlier_value = round(outlier_value, 3)
+                new_y_list = []
+                for data in cut_data:
+                    if data < outlier_value:
+                        new_y_list.append(data)
+                cut_dict['New_OD'] = new_y_list
+                mean2 = round(statistics.mean(new_y_list), 3)
+                std2 = round(statistics.stdev(new_y_list), 3)
+                df = pd.DataFrame(data=cut_dict)
+                ax = sns.swarmplot(data=df, y="New_OD")
+                ax = sns.boxplot(data=df, y="New_OD", color='white')
+                plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')
+                plt.close()
+                check_cut_off = 'true'
+                return render(request, 'Cut_off.html', {
+                    'mean': mean,
+                    'std': std,
+                    'mean2': mean2,
+                    'std2': std2,
+                    'check': check_cut_off,
+                    'outlier_value': outlier_value,
+                    'cut_off_value': cut_off_value,
+                })
+            elif request.POST.get('cut_off_submit'):
+                input3 = request.POST.get('input3')
+                input4 = request.POST.get('input4')
+                cut_off_value = (float(input3) * mean2) + (float(input4) * std2)
+                cut_off_value = round(cut_off_value, 3)
+                return render(request, 'Cut_off.html', {
+                    'mean': mean,
+                    'std': std,
+                    'mean2': mean2,
+                    'std2': std2,
+                    'check': check_cut_off,
+                    'outlier_value': outlier_value,
+                    'cut_off_value': cut_off_value,
+                })
+        elif cut_data == []:
+            for i in dictionary[int(HD)][1:]:
+                for g in i[3:8]:
+                    cut_data.append(g)
+            cut_data.pop(0)
+            cut_dict["OD"] = cut_data
+            mean = round(statistics.mean(cut_data), 3)
+            std = round(statistics.stdev(cut_data), 3)
             df = pd.DataFrame(data=cut_dict)
-            ax = sns.swarmplot(data=df, y="New_OD")
-            ax = sns.boxplot(data=df, y="New_OD", color='white')
-            plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')
+            ax = sns.swarmplot(data=df, y="OD")
+            ax = sns.boxplot(data=df, y="OD", color='white')
+            plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')
             plt.close()
-            check_cut_off = 'true'
             return render(request, 'Cut_off.html', {
                 'mean': mean,
                 'std': std,
-                'mean2': mean2,
-                'std2': std2,
                 'check': check_cut_off,
                 'outlier_value': outlier_value,
                 'cut_off_value': cut_off_value,
             })
-        elif request.POST.get('cut_off_submit'):
-            input3 = request.POST.get('input3')
-            input4 = request.POST.get('input4')
-            cut_off_value = (float(input3) * mean2) + (float(input4) * std2)
-            cut_off_value = round(cut_off_value, 3)
-            return render(request, 'Cut_off.html', {
-                'mean': mean,
-                'std': std,
-                'mean2': mean2,
-                'std2': std2,
-                'check': check_cut_off,
-                'outlier_value': outlier_value,
-                'cut_off_value': cut_off_value,
-            })
-    elif cut_data == []:
-        for i in dictionary[int(HD)][1:]:
-            for g in i[3:8]:
-                cut_data.append(g)
-        cut_data.pop(0)
-        cut_dict["OD"] = cut_data
-        mean = round(statistics.mean(cut_data), 3)
-        std = round(statistics.stdev(cut_data), 3)
-        df = pd.DataFrame(data=cut_dict)
-        ax = sns.swarmplot(data=df, y="OD")
-        ax = sns.boxplot(data=df, y="OD", color='white')
-        plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')
-        plt.close()
         return render(request, 'Cut_off.html', {
             'mean': mean,
             'std': std,
+            'mean2': mean2,
+            'std2': std2,
             'check': check_cut_off,
             'outlier_value': outlier_value,
             'cut_off_value': cut_off_value,
         })
-    return render(request, 'Cut_off.html', {
-        'mean': mean,
-        'std': std,
-        'mean2': mean2,
-        'std2': std2,
-        'check': check_cut_off,
-        'outlier_value': outlier_value,
-        'cut_off_value': cut_off_value,
-    })
+    except:
+        return render(request, 'Error.html', {
+            'error': 'An error occurred, please be sure to select the plate with the healthy donor data on the Visualize data page.'
+        })
 
 def Intermediate_result(request):
     return render(request, 'Intermediate_result.html')
