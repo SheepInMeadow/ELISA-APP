@@ -41,7 +41,6 @@
 
 .main {
     position: absolute; left: 190px; top: 70px; right: 0; bottom: 0;
-    text-align:center;
     overflow: auto;
     z-index: -1;
 }
