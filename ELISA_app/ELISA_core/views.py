@@ -16,13 +16,19 @@ def Home(request):
 def Input_data(request):
     try:
         if request.method == 'POST':
+            error = 'correct'
             if request.POST.get('text_submit'):
-                text_data(request)
+                error = text_data(request)
             if request.POST.get('file_submit'):
-                file_data(request)
-            return render(request, 'Input_data.html', {
-                'check': 'correct',
-            })
+                error = file_data(request)
+            if error == "text" or error == "file" or error == "extension":
+                return render(request, 'Input_data.html', {
+                    'check': error,
+                })
+            else:
+                return render(request, 'Input_data.html', {
+                    'check': 'correct',
+                })
         else:
             return render(request, 'Input_data.html')
     except:
@@ -34,9 +40,7 @@ def Input_data(request):
 def text_data(request):
     data = request.POST.get('text_input')
     if data == '':
-        return render(request, 'Input_data.html', {
-            'check': 'text',
-        })
+        return "text"
     data = data.strip().split('\r\n')
     data_string = formatting_txt(data, 1)
     database(data_string)
@@ -44,14 +48,10 @@ def text_data(request):
 
 def file_data(request):
     if request.FILES.getlist('my_file') == []:
-        return render(request, 'Input_data.html', {
-            'check': 'file',
-        })
+        return "file"
     for file in request.FILES.getlist('my_file'):
         if str(file).split('.')[1] not in ['txt', 'xlsx']:
-            return render(request, 'Input_data.html', {
-                'check': 'extension',
-            })
+            return 'extension'
     for file in request.FILES.getlist('my_file'):
         if str(file).split('.')[1] == 'txt':
             data = file.readlines()

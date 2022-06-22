@@ -16,6 +16,7 @@
         <input type="file" name="my_file" class="input_file" multiple/>
         <input type="submit" name="file_submit" value="Upload data" class="input_button_file"/>
     </form>
+    {{check}}
     {% if check == 'text' %}
         <p class="message_fail">No data was found in the textarea, please try again.</p>
     {% endif %}
