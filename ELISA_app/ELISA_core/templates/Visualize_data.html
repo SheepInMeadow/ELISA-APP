@@ -4,64 +4,69 @@
 {% block header %} Visualize Data {% endblock %}
 
 {% block content %}
+{% load static %}
+<link rel="stylesheet" type="text/css"
+          href="{% static 'css/Visualize_data.css' %}">
+<script src="{% static 'javascript/Visualize_data.js' %}"></script>
 <form method="POST">
-{% csrf_token %}
-{% for key, value_list in dictionary.items %}
-<div id="combined">
-    <div id="table">
-    <table border="1" class="raw_data">
-        <thead>
-            <td>{{key}}</td>
-        </thead>
-        {% for value in value_list %}
-        <tr>
-        {% for i in value %}
-            <td>{{i}}</td>
-        {% endfor %}
-        </tr>
-        {% endfor %}
-    </table>
-    </div>
-    <div id="graph">
-        <img src="../static/images/Plate_{{ key }}.png" height="250px" width="auto">
-    </div>
-    <div id="opties">
-        <p>&nbsp&nbsp&nbsp&nbsp&nbsp&nbspSelect points for lineair part:</p>
-        &nbsp&nbsp&nbsp&nbsp&nbsp&nbspTop:
-        <select name="top" id="top">
-          <option value="7">7</option>
-          <option value="6">6</option>
-          <option value="5">5</option>
-          <option value="4">4</option>
-          <option value="3">3</option>
-          <option value="2">2</option>
-          <option value="1">1</option>
+    {% csrf_token %}
+    {% for key, value_list in dictionary.items %}
+        <div id="combined">
+            <div id="table">
+                <table border="1" class="raw_data" onloadstart="test()">
+                    <thead>
+                        <td>{{key}}</td>
+                    </thead>
+                    {% for value in value_list %}
+                        <tr>
+                            {% for i in value %}
+                                <td id="{{i}}">{{i}}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <div id="graph">
+                <img src="../static/images/Plate_{{ key }}.png" height="250px" width="auto">
+            </div>
+            <div id="opties">
+                <p>&nbsp&nbsp&nbsp&nbsp&nbsp&nbspSelect points for lineair part:</p>
+                &nbsp&nbsp&nbsp&nbsp&nbsp&nbspTop:
+                <select name="top" id="top">
+                  <option value="7">7</option>
+                  <option value="6">6</option>
+                  <option value="5">5</option>
+                  <option value="4">4</option>
+                  <option value="3">3</option>
+                  <option value="2">2</option>
+                  <option value="1">1</option>
+                </select>
+                <br>Bottom:
+                <select name="bottom" id="bottom">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                </select>
+            </div>
+            <div id="checkboxes">
+                Remove plate from calculations:<br>
+                <input type="checkbox" name="delete" value="{{ key }}">
+            </div>
+        </div>
+        <br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+    {% endfor %}
+    <div id="Healthydonor">
+        Choose the a plate with the healthy donor data:
+        <select name="HD">
+            {% for key, value_list in dictionary.items %}
+                <option value="{{ key }}">{{ key }}</option>
+            {% endfor %}
+            <input type="submit" value="Confirm" id="spacing">
         </select>
-        <br>Bottom:
-        <select name="bottom" id="bottom">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-        </select>
     </div>
-    <div id="checkboxes">
-        Checkbox for disregarding plate:<br>
-        <input type="checkbox" name="delete" value="{{ key }}">
-    </div>
-</div>
-{% endfor %}
-<div id="Healthydonor">
-    Choose the a plate with the healthy donor data:
-    <select name="HD">
-        {% for key, value_list in dictionary.items %}
-        <option value="{{ key }}">{{ key }}</option>
-        {% endfor %}
-        <input type="submit" value="Confirm" id="spacing">
-    </select>
-</div>
 </form>
 {% endblock %}

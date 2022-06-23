@@ -1,3 +1,5 @@
+import json
+
 from django.shortcuts import render, redirect
 from .models import Plates
 import openpyxl
@@ -116,11 +118,10 @@ check = ''
 
 
 def Plate_layout(request):
-    global check
+    global check, totaal
     if request.method == 'POST':
         if request.POST.get('file_submit'):
             excel_data = Plate_layout_1(request)
-            global totaal
             totaal = Plate_layout_2(excel_data)
             check = 'go'
             return render(request, 'Plate_layout.html', {
