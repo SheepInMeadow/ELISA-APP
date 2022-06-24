@@ -56,10 +56,10 @@ def file_data(request):
         if str(file).split('.')[1] == 'txt':
             data = file.readlines()
             data_string = formatting_txt(data, 2)
-            database(data_string)
+            database(data_string, file)
         elif str(file).split('.')[1] == 'xlsx':
             data_string = formatting_xlsx(file)
-            database(data_string)
+            database(data_string, file)
 
 
 def formatting_txt(data, counter):
@@ -97,18 +97,13 @@ def formatting_xlsx(file_name):
     return data_string
 
 
-id = 1
-
-
-def database(data_string):
-    global id
+def database(data_string, file):
     split = data_string.split('=')
     plates_instance = Plates.objects.create(
-        id=str(id),
+        id=file,
         name=str(split[0]),
         data=data_string
     )
-    id += 1
 
 
 totaal = []
@@ -242,52 +237,50 @@ bottom = []
 
 
 def Visualize_data(request):
-    try:
-        global dictionary
-        global HD
-        global delete
-        global top
-        global bottom
-        if request.method == 'POST':
-            HD = request.POST['HD']
-            top = request.POST.getlist('top')
-            bottom = request.POST.getlist('bottom')
-            delete = request.POST.getlist('delete')
-        data = Plates.objects.values()
-        teller = 1
-        counter = 0
+    #try:
+    global dictionary
+    global HD
+    global delete
+    global top
+    global bottom
+    if request.method == 'POST':
+        HD = request.POST['HD']
+        top = request.POST.getlist('top')
+        bottom = request.POST.getlist('bottom')
+        delete = request.POST.getlist('delete')
+    data = Plates.objects.values()
+    counter = 0
+    nested = []
+    temp = []
+    for i in data:
+        name = i['id']
+        lines = i['data'].split('=')[:-1]
+        number1 = lines[106].replace(',', '.')
+        number2 = lines[107].replace(',', '.')
+        calculation = ((float(number1) + float(number2))/2)
+        mean = round(calculation, 3)
+        for j in lines[1:]:
+            if ',' in j:
+                new = float(j.replace(',', '.')) - mean
+                temp.append(round(new, 3))
+            else:
+                temp.append(j)
+            counter += 1
+            if counter == 13:
+                nested.append(temp)
+                counter = 0
+                temp = []
+        dictionary[name] = nested
         nested = []
-        temp = []
-        for i in data:
-            lines = i['data'].split('=')[:-1]
-            number1 = lines[106].replace(',', '.')
-            number2 = lines[107].replace(',', '.')
-            calculation = ((float(number1) + float(number2))/2)
-            mean = round(calculation, 3)
-            for j in lines[1:]:
-                if ',' in j:
-                    new = float(j.replace(',', '.')) - mean
-                    temp.append(round(new, 3))
-                else:
-                    temp.append(j)
-                counter += 1
-                if counter == 13:
-                    nested.append(temp)
-                    counter = 0
-                    temp = []
-            dictionary[teller] = nested
-            nested = []
-            teller += 1
-        if totaal != []:
-            name_list = create_graph(dictionary)
-        return render(request, 'Visualize_data.html', {
-            'dictionary': dictionary,
-            'name_list': name_list,
-        })
-    except:
-        return render(request, 'Error.html', {
-            'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the Plate Layout page.',
-        })
+    if totaal != []:
+        create_graph(dictionary)
+    return render(request, 'Visualize_data.html', {
+        'dictionary': dictionary,
+    })
+    #except:
+    #    return render(request, 'Error.html', {
+    #        'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the Plate Layout page.',
+    #    })
 
 def create_graph(dictionary):
     conc = totaal[0][2][1]
@@ -303,26 +296,23 @@ def create_graph(dictionary):
             temp.append(round(mean, 3))
         y_list.append(temp)
         temp = []
-    name_list = []
-    counter = 1
-    for i in y_list:
+    counter = 0
+    for key in dictionary:
         guess = [1, 1, 1, 1]
-        params, params_coveriance = optimization.curve_fit(formula, x_list, i, guess)
+        params, params_coveriance = optimization.curve_fit(formula, x_list, y_list[counter], guess)
+        intermediate_list(key, params)
         x_min, x_max = np.amin(x_list), np.amax(x_list)
         xs = np.linspace(x_min, x_max, 1000)
-        plt.scatter(x_list, i)
+        plt.scatter(x_list, y_list[counter])
         plt.plot(xs, formula(xs, *params))
         plt.xscale('log')
         plt.grid()
         ax = plt.gca()
         plt.xticks([1.0, 10, 100])
         ax.xaxis.set_major_formatter(ScalarFormatter())
-        name = 'Plate_' + str(counter) + '.png'
-        name_list.append(name)
-        counter += 1
-        plt.savefig('ELISA_core/static/images/' + str(name))
+        plt.savefig('ELISA_core/static/images/' + str(key) + '.png')
         plt.close()
-    return name_list
+        counter += 1
 
 def formula(x, A, B, C, D):
     E = 1
@@ -424,8 +414,51 @@ def Cut_off(request):
             'error': 'An error occurred, please be sure to select the plate with the healthy donor data on the Visualize data page.'
         })
 
+
+def formula2(y, A, B, C, D):
+    E = 1
+    return C * (((A - D) / (-(D) + y)) ** (1 / E) - 1) ** (1 / B)
+
+
 def Intermediate_result(request):
-    return render(request, 'Intermediate_result.html')
+    print(intermediate_dictionary)
+    return render(request, 'Intermediate_result.html', {
+        'intermediate_dictionary': intermediate_dictionary,
+    })
+
+
+intermediate_dictionary = {}
+
+
+def intermediate_list(key, params):
+    global intermediate_dictionary
+    for options in range(len(totaal)):
+        num1 = int(''.join(filter(str.isdigit, key)))
+        num2 = int(''.join(filter(str.isdigit, totaal[options][0][0])))
+        if num1 == num2:
+            position = options
+    dilution = end_dilution[3][3]
+    list1 = []
+    for i, j in dictionary.items():
+        if i == key:
+            for values in range(len(j)):
+                if values != 0:
+                    for value in range(len(j[values])):
+                        if values == 1 and value == 3 or values == 1 and value == 8:
+                            if value != 0 and value != 1 and value != 2:
+                                list1.append([totaal[position][values + 1][value], '-'])
+                        else:
+                            if value != 0 and value != 1 and value != 2:
+                                result = formula2(j[values][value], *params)
+                                if np.isnan(result):
+                                    result = '-'
+                                else:
+                                    result *= int(dilution)
+                                    result = round(result, 3)
+                                list1.append([totaal[position][values + 1][value], result])
+            intermediate_dictionary[i] = list1
+
+
 
 def End_results(request):
     return render(request, 'End_results.html')

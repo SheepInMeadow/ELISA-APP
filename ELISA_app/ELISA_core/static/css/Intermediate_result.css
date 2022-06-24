@@ -1,0 +1,12 @@
+.spacing {
+    margin-left: 5px;
+    font-family: "Arial", serif;
+}
+
+td, th {
+    border: 1px solid grey;
+}
+
+table {
+    border: 1px solid grey;
+}

@@ -4,5 +4,22 @@
 {% block header %} Intermediate Results {% endblock %}
 
 {% block content %}
-    content here
+    <p class="spacing">Lower detection limit: <input type="number" id="lower"></p>
+    <p class="spacing">Upper detection limit: <input type="number" id="upper"></p>
+    <table>
+        <thead>
+            <th>Sample ID</th>
+            <th>Arbitary units</th>
+            <th>1,2,3</th>
+        </thead>
+        {% for key, values in intermediate_dictionary.items %}
+        {% for value in values %}
+        <tr>
+            {% for element in value %}
+            <td>{{element}}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+        {% endfor %}
+    </table>
 {% endblock %}

@@ -11,7 +11,7 @@
     <div id="table">
     <table border="1" class="raw_data">
         <thead>
-            <td>{{key}}</td>
+            <td><input type="text" value="{{key}}" id="{{key}}"></td>
         </thead>
         {% for value in value_list %}
         <tr>
@@ -23,7 +23,7 @@
     </table>
     </div>
     <div id="graph">
-        <img src="../static/images/Plate_{{ key }}.png" height="250px" width="auto">
+        <img src="../static/images/{{ key }}.png" height="250px" width="auto">
     </div>
     <div id="opties">
         <p>&nbsp&nbsp&nbsp&nbsp&nbsp&nbspSelect points for lineair part:</p>
