@@ -4,15 +4,25 @@
 {% block header %} Intermediate Results {% endblock %}
 
 {% block content %}
-    <p class="spacing">Lower detection limit: <input type="number" id="lower"></p>
-    <p class="spacing">Upper detection limit: <input type="number" id="upper"></p>
-    <table>
+    <form method="POST">
+        {% csrf_token %}
+        <p class="spacing">Lower detection limit: <input type="number" name="lower" value="{{lower}}"></p>
+        <p class="spacing">Upper detection limit: <input type="number" name="upper" value="{{upper}}"></p>
+        <input class="spacing" type="submit" value="Update table" name="detection_submit">
+    </form>
+    <p class="spacing">
+        0: No Au/ml found<br>
+        1: Au/ml under lower detection limit<br>
+        2: Au/ml in between lower and upper detection limit<br>
+        3: Au/ml over upper detection limit<br>
+    </p>
+    <table class="spacing">
         <thead>
             <th>Sample ID</th>
             <th>Arbitary units</th>
             <th>1,2,3</th>
         </thead>
-        {% for key, values in intermediate_dictionary.items %}
+        {% for key, values in end_result.items %}
         {% for value in values %}
         <tr>
             {% for element in value %}

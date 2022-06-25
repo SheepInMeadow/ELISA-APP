@@ -238,50 +238,50 @@ bottom = []
 
 
 def Visualize_data(request):
-    #try:
-    global dictionary
-    global HD
-    global delete
-    global top
-    global bottom
-    if request.method == 'POST':
-        HD = request.POST['HD']
-        top = request.POST.getlist('top')
-        bottom = request.POST.getlist('bottom')
-        delete = request.POST.getlist('delete')
-    data = Plates.objects.values()
-    counter = 0
-    nested = []
-    temp = []
-    for i in data:
-        name = i['id']
-        lines = i['data'].split('=')[:-1]
-        number1 = lines[106].replace(',', '.')
-        number2 = lines[107].replace(',', '.')
-        calculation = ((float(number1) + float(number2))/2)
-        mean = round(calculation, 3)
-        for j in lines[1:]:
-            if ',' in j:
-                new = float(j.replace(',', '.')) - mean
-                temp.append(round(new, 3))
-            else:
-                temp.append(j)
-            counter += 1
-            if counter == 13:
-                nested.append(temp)
-                counter = 0
-                temp = []
-        dictionary[name] = nested
+    try:
+        global dictionary
+        global HD
+        global delete
+        global top
+        global bottom
+        if request.method == 'POST':
+            HD = request.POST['HD']
+            top = request.POST.getlist('top')
+            bottom = request.POST.getlist('bottom')
+            delete = request.POST.getlist('delete')
+        data = Plates.objects.values()
+        counter = 0
         nested = []
-    if totaal != []:
-        create_graph(dictionary)
-    return render(request, 'Visualize_data.html', {
-        'dictionary': dictionary,
-    })
-    #except:
-    #    return render(request, 'Error.html', {
-    #        'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the Plate Layout page.',
-    #    })
+        temp = []
+        for i in data:
+            name = i['id']
+            lines = i['data'].split('=')[:-1]
+            number1 = lines[106].replace(',', '.')
+            number2 = lines[107].replace(',', '.')
+            calculation = ((float(number1) + float(number2))/2)
+            mean = round(calculation, 3)
+            for j in lines[1:]:
+                if ',' in j:
+                    new = float(j.replace(',', '.')) - mean
+                    temp.append(round(new, 3))
+                else:
+                    temp.append(j)
+                counter += 1
+                if counter == 13:
+                    nested.append(temp)
+                    counter = 0
+                    temp = []
+            dictionary[name] = nested
+            nested = []
+        if totaal != []:
+            create_graph(dictionary)
+        return render(request, 'Visualize_data.html', {
+            'dictionary': dictionary,
+        })
+    except:
+        return render(request, 'Error.html', {
+            'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the Plate Layout page.',
+        })
 
 def create_graph(dictionary):
     conc = totaal[0][2][1]
@@ -382,7 +382,7 @@ def Cut_off(request):
                     'cut_off_value': cut_off_value,
                 })
         elif cut_data == []:
-            for i in dictionary[int(HD)][1:]:
+            for i in dictionary[HD][1:]:
                 for g in i[3:8]:
                     cut_data.append(g)
             cut_data.pop(0)
@@ -422,9 +422,49 @@ def formula2(y, A, B, C, D):
 
 
 def Intermediate_result(request):
-    print(intermediate_dictionary)
+    lower, upper = '', ''
+    end_result = {}
+    for key, values in intermediate_dictionary.items():
+        if key not in delete:
+            end_result[key] = values
+    print(delete, end_result)
+    if request.method == 'POST':
+        if request.POST.get('detection_submit'):
+            lower = request.POST.get('lower')
+            upper = request.POST.get('upper')
+            for key, values in end_result.items():
+                temp = []
+                for value in values:
+                    if value[1] == '-':
+                        if len(value) == 2:
+                            temp.append(value + [0])
+                        else:
+                            value[2] = 0
+                            temp.append(value)
+                    elif int(value[1]) <= int(lower):
+                        if len(value) == 2:
+                            temp.append(value + [1])
+                        else:
+                            value[2] = 1
+                            temp.append(value)
+                    elif int(value[1]) >= int(upper):
+                        if len(value) == 2:
+                            temp.append(value + [3])
+                        else:
+                            value[2] = 3
+                            temp.append(value)
+                    else:
+                        if len(value) == 2:
+                            temp.append(value + [2])
+                        else:
+                            value[2] = 2
+                            temp.append(value)
+                end_result[key] = temp
+    #print(intermediate_dictionary)
     return render(request, 'Intermediate_result.html', {
-        'intermediate_dictionary': intermediate_dictionary,
+        'end_result': end_result,
+        'lower': lower,
+        'upper': upper,
     })
 
 
