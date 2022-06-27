@@ -4,5 +4,26 @@
 {% block header %} End Results {% endblock %}
 
 {% block content %}
-    content here
+<form method="POST">
+    {% csrf_token %}
+    <p class="spacing">
+        How many times higher should the modified peptides (OD) be compared to the non-modified peptides (OD):
+        <input type="number" name="OD_multiplier" value="2">
+        <input type="submit" value="Update table" name="update_table">
+    </p>
+</form>
+<table class="spacing">
+    <thead>
+        <th>Sample ID</th>
+        <th>Positive (1) or negative (0)</th>
+        <th>Au/ml</th>
+    </thead>
+    {% for key, values in final_dictionary.items %}
+    <tr>
+       {% for value in values %}
+        <td>{{value}}</td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
 {% endblock %}

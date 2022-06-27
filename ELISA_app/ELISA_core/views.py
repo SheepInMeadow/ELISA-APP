@@ -1,5 +1,3 @@
-import json
-
 from django.shortcuts import render, redirect
 from .models import Plates
 import openpyxl
@@ -10,6 +8,7 @@ import numpy as np
 import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
 import statistics
+
 
 def Home(request):
     return render(request, 'Home.html')
@@ -233,8 +232,7 @@ def Dilutions_1(i, temp, row_names, dilution):
 dictionary = {}
 HD = ''
 delete = []
-top = []
-bottom = []
+points_dictionary = {}
 
 
 def Visualize_data(request):
@@ -242,12 +240,14 @@ def Visualize_data(request):
         global dictionary
         global HD
         global delete
-        global top
-        global bottom
         if request.method == 'POST':
             HD = request.POST['HD']
             top = request.POST.getlist('top')
             bottom = request.POST.getlist('bottom')
+            counter = 0
+            for keys in dictionary:
+                points_dictionary[keys] = [top[counter], bottom[counter]]
+                counter += 1
             delete = request.POST.getlist('delete')
         data = Plates.objects.values()
         counter = 0
@@ -283,6 +283,10 @@ def Visualize_data(request):
             'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the Plate Layout page.',
         })
 
+
+mean_ST_dictionary = {}
+
+
 def create_graph(dictionary):
     conc = totaal[0][2][1]
     x_list = [conc]
@@ -297,6 +301,11 @@ def create_graph(dictionary):
             temp.append(round(mean, 3))
         y_list.append(temp)
         temp = []
+    global mean_ST
+    counter = 0
+    for keys in dictionary:
+        mean_ST_dictionary[keys] = y_list[counter]
+        counter += 1
     counter = 0
     for key in dictionary:
         guess = [1, 1, 1, 1]
@@ -421,13 +430,16 @@ def formula2(y, A, B, C, D):
     return C * (((A - D) / (-(D) + y)) ** (1 / E) - 1) ** (1 / B)
 
 
+end_result = {}
+
+
 def Intermediate_result(request):
     lower, upper = '', ''
+    global end_result
     end_result = {}
     for key, values in intermediate_dictionary.items():
         if key not in delete:
             end_result[key] = values
-    print(delete, end_result)
     if request.method == 'POST':
         if request.POST.get('detection_submit'):
             lower = request.POST.get('lower')
@@ -460,7 +472,6 @@ def Intermediate_result(request):
                             value[2] = 2
                             temp.append(value)
                 end_result[key] = temp
-    #print(intermediate_dictionary)
     return render(request, 'Intermediate_result.html', {
         'end_result': end_result,
         'lower': lower,
@@ -500,6 +511,43 @@ def intermediate_list(key, params):
             intermediate_dictionary[i] = list1
 
 
+final_dictionary = {}
+
 
 def End_results(request):
-    return render(request, 'End_results.html')
+    global final_dictionary
+    if request.method == 'POST':
+        if request.POST.get('update_table'):
+            final_dictionary = {}
+            OD_multiplier = request.POST.get('OD_multiplier')
+            if len(end_result[HD][0]) == 3:
+                for keys, values in dictionary.items():
+                    if keys not in delete:
+                        counter = 0
+                        for OD_list in values[1:]:
+                            for OD in OD_list[3:]:
+                                end_result[keys][counter].append(OD)
+                                counter += 1
+            sampleID = 1
+            for keys, values in end_result.items():
+                if keys != HD:
+                    counter = 0
+                    counter2 = 0
+                    for elements in values:
+                        top = mean_ST_dictionary[keys][int(points_dictionary[keys][0]) - 1]
+                        bot = mean_ST_dictionary[keys][int(points_dictionary[keys][1]) - 1]
+                        if counter < 5:
+                            if elements[3] <= bot and elements[3] >= top:
+                                if elements[2] == 2:
+                                    if (values[counter2][3])/(values[counter2 + 5][3]) >= int(OD_multiplier):
+                                        final_dictionary[sampleID] = [elements[0], 1, elements[1]]
+                            if sampleID not in final_dictionary:
+                                final_dictionary[sampleID] = [elements[0], 0, elements[1]]
+                            sampleID += 1
+                        counter += 1
+                        counter2 += 1
+                        if counter == 10:
+                            counter = 0
+    return render(request, 'End_results.html', {
+        'final_dictionary': final_dictionary,
+    })
