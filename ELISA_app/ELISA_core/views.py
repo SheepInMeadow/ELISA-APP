@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from .models import Plates
 import openpyxl
 import seaborn as sns
@@ -8,6 +8,7 @@ import numpy as np
 import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
 import statistics
+from operator import itemgetter
 
 
 def Home(request):
@@ -18,11 +19,9 @@ def Input_data(request):
     try:
         if request.method == 'POST':
             error = 'correct'
-            if request.POST.get('text_submit'):
-                error = text_data(request)
             if request.POST.get('file_submit'):
                 error = file_data(request)
-            if error == "text" or error == "file" or error == "extension":
+            if error == "file" or error == "extension":
                 return render(request, 'Input_data.html', {
                     'check': error,
                 })
@@ -36,15 +35,6 @@ def Input_data(request):
         return render(request, 'Input_data.html', {
             'check': 'false',
         })
-
-
-def text_data(request):
-    data = request.POST.get('text_input')
-    if data == '':
-        return "text"
-    data = data.strip().split('\r\n')
-    data_string = formatting_txt(data, 1)
-    database(data_string)
 
 
 def file_data(request):
@@ -216,7 +206,7 @@ def Dilutions_1(i, temp, row_names, dilution):
         if i == 0:
             if x == 0:
                 temp.append(row_names[i])
-            elif x == 1 or x == 2 or x == 3 or x == 8:
+            elif x == 1 or x == 2:
                 temp.append("1")
             else:
                 temp.append(dilution)
@@ -242,8 +232,8 @@ def Visualize_data(request):
         global delete
         if request.method == 'POST':
             HD = request.POST['HD']
-            top = request.POST.getlist('top')
-            bottom = request.POST.getlist('bottom')
+            bottom = request.POST.getlist('top')
+            top = request.POST.getlist('bottom')
             counter = 0
             for keys in dictionary:
                 points_dictionary[keys] = [top[counter], bottom[counter]]
@@ -301,7 +291,7 @@ def create_graph(dictionary):
             temp.append(round(mean, 3))
         y_list.append(temp)
         temp = []
-    global mean_ST
+    global mean_ST_dictionary
     counter = 0
     for keys in dictionary:
         mean_ST_dictionary[keys] = y_list[counter]
@@ -434,52 +424,67 @@ end_result = {}
 
 
 def Intermediate_result(request):
-    lower, upper = '', ''
     global end_result
     end_result = {}
     for key, values in intermediate_dictionary.items():
         if key not in delete:
             end_result[key] = values
-    if request.method == 'POST':
-        if request.POST.get('detection_submit'):
-            lower = request.POST.get('lower')
-            upper = request.POST.get('upper')
-            for key, values in end_result.items():
-                temp = []
-                for value in values:
-                    if value[1] == '-':
-                        if len(value) == 2:
-                            temp.append(value + [0])
-                        else:
-                            value[2] = 0
-                            temp.append(value)
-                    elif int(value[1]) <= int(lower):
-                        if len(value) == 2:
-                            temp.append(value + [1])
-                        else:
-                            value[2] = 1
-                            temp.append(value)
-                    elif int(value[1]) >= int(upper):
-                        if len(value) == 2:
-                            temp.append(value + [3])
-                        else:
-                            value[2] = 3
-                            temp.append(value)
+    temp0 = []
+    temp1 = []
+    temp2 = []
+    temp3 = []
+    temp4 = []
+    for key, values in end_result.items():
+        mean_ST_dictionary[key].reverse()
+        top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
+        bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
+        string_top = formula2(top, *params_dictionary[key]) * int(end_dilution[3][3])
+        string_bot = formula2(bot, *params_dictionary[key]) * int(end_dilution[3][3])
+        for value in values:
+            if type(value[1]) == str:
+                if len(value) == 2:
+                    if float(value[1]) < bot:
+                        temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + [1])
                     else:
-                        if len(value) == 2:
-                            temp.append(value + [2])
-                        else:
-                            value[2] = 2
-                            temp.append(value)
-                end_result[key] = temp
+                        temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + [3])
+                else:
+                    value[2] = 1
+                    temp0.append(value)
+            elif int(value[1]) <= float(string_bot):
+                if len(value) == 2:
+                    temp1.append(value + [1])
+                else:
+                    value[2] = 1
+                    temp1.append(value)
+            elif int(value[1]) >= float(string_top):
+                if len(value) == 2:
+                    temp3.append(value + [3])
+                else:
+                    value[2] = 3
+                    temp3.append(value)
+            else:
+                if len(value) == 2:
+                    temp2.append(value + [2])
+                else:
+                    value[2] = 2
+                    temp2.append(value)
+        mean_ST_dictionary[key].reverse()
+    sorted_temp1 = sorted(temp1, key=itemgetter(1))
+    sorted_temp2 = sorted(temp2, key=itemgetter(1))
+    sorted_temp3 = sorted(temp3, key=itemgetter(1))
+    lower = sorted_temp2[0][1]
+    upper = sorted_temp2[-1][1]
+    print(upper)
+    complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
     return render(request, 'Intermediate_result.html', {
-        'end_result': end_result,
+        'complete_list': complete_list,
         'lower': lower,
         'upper': upper,
     })
 
 
 intermediate_dictionary = {}
+params_dictionary = {}
 
 
 def intermediate_list(key, params):
@@ -493,21 +498,18 @@ def intermediate_list(key, params):
     list1 = []
     for i, j in dictionary.items():
         if i == key:
+            params_dictionary[key] = params
             for values in range(len(j)):
                 if values != 0:
                     for value in range(len(j[values])):
-                        if values == 1 and value == 3 or values == 1 and value == 8:
-                            if value != 0 and value != 1 and value != 2:
-                                list1.append([totaal[position][values + 1][value], '-'])
-                        else:
-                            if value != 0 and value != 1 and value != 2:
-                                result = formula2(j[values][value], *params)
-                                if np.isnan(result):
-                                    result = '-'
-                                else:
-                                    result *= int(dilution)
-                                    result = round(result, 3)
-                                list1.append([totaal[position][values + 1][value], result])
+                        if value != 0 and value != 1 and value != 2:
+                            result = formula2(j[values][value], *params)
+                            if np.isnan(result):
+                                result = str(j[values][value])
+                            else:
+                                result *= int(dilution)
+                                result = round(result, 3)
+                            list1.append([totaal[position][values + 1][value], result])
             intermediate_dictionary[i] = list1
 
 

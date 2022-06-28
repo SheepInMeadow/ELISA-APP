@@ -9,16 +9,10 @@
           href="{% static 'css/Input_data.css' %}">
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <div class="input_text">Paste your data here:</div><br>
-        <textarea rows="12" cols="100" name="text_input" class="input_text_input"></textarea>
-        <input type="submit" name="text_submit" value="Upload data" class="input_button_text"/>
-        <br><br>
+        <div class="input_text">Submit your data here:</div><br>
         <input type="file" name="my_file" class="input_file" multiple/>
         <input type="submit" name="file_submit" value="Upload data" class="input_button_file"/>
     </form>
-    {% if check == 'text' %}
-        <p class="message_fail">No data was found in the textarea, please try again.</p>
-    {% endif %}
     {% if check == 'file' %}
         <p class="message_fail">No files were selected, please try again.</p>
     {% endif %}

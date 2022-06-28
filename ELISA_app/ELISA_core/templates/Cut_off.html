@@ -11,6 +11,7 @@
 <form method="POST">
     {% csrf_token %}
     <p class="spacing">Fill in the fields to complete the formula for determining the outlier value:</p>
+    <p class="spacing">Formula for outlier value = 1 * mean + 4 * standard deviation</p>
     <p class="spacing">Outlier = <input type="number" name="input1" value="1"> * {{ mean }} + <input type="number" name="input2" value="4"> * {{ std }}</p>
     {% if outlier_value != 0.0 %}
         <p class="spacing">Outlier value: {{outlier_value}}</p>
@@ -24,6 +25,7 @@
     <form method="POST">
         {% csrf_token %}
         <p class="spacing">Fill in the fields to complete the formula for determining the cut-off value:</p>
+        <p class="spacing">Formula for cut-off value = 1 * new mean + 4 * new standard deviation</p>
         <p class="spacing">cut-off = <input type="number" name="input3" value="1"> * {{ mean2 }} + <input type="number" name="input4" value="2"> * {{ std2 }}</p>
         {% if cut_off_value != 0.0 %}
             <p class="spacing">Cut-off value: {{cut_off_value}}</p>
