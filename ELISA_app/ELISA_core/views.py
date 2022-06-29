@@ -421,10 +421,14 @@ def formula2(y, A, B, C, D):
 
 
 end_result = {}
+lower = 0.0
+upper = 0.0
 
 
 def Intermediate_result(request):
     global end_result
+    global lower
+    global upper
     end_result = {}
     for key, values in intermediate_dictionary.items():
         if key not in delete:
@@ -474,8 +478,11 @@ def Intermediate_result(request):
     sorted_temp3 = sorted(temp3, key=itemgetter(1))
     lower = sorted_temp2[0][1]
     upper = sorted_temp2[-1][1]
-    print(upper)
     complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
+    if request.method == 'POST':
+        if request.POST.get('limit_submit'):
+            lower = request.POST.get('lower')
+            upper = request.POST.get('upper')
     return render(request, 'Intermediate_result.html', {
         'complete_list': complete_list,
         'lower': lower,
@@ -522,7 +529,7 @@ def End_results(request):
         if request.POST.get('update_table'):
             final_dictionary = {}
             OD_multiplier = request.POST.get('OD_multiplier')
-            if len(end_result[HD][0]) == 3:
+            if len(end_result[HD][0]) == 2:
                 for keys, values in dictionary.items():
                     if keys not in delete:
                         counter = 0
@@ -536,12 +543,10 @@ def End_results(request):
                     counter = 0
                     counter2 = 0
                     for elements in values:
-                        top = mean_ST_dictionary[keys][int(points_dictionary[keys][0]) - 1]
-                        bot = mean_ST_dictionary[keys][int(points_dictionary[keys][1]) - 1]
                         if counter < 5:
-                            if elements[3] <= bot and elements[3] >= top:
-                                if elements[2] == 2:
-                                    if (values[counter2][3])/(values[counter2 + 5][3]) >= int(OD_multiplier):
+                            if float(elements[1]) >= float(lower) and float(elements[1]) <= float(upper):
+                                if elements[2] >= float(cut_off_value):
+                                    if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
                                         final_dictionary[sampleID] = [elements[0], 1, elements[1]]
                             if sampleID not in final_dictionary:
                                 final_dictionary[sampleID] = [elements[0], 0, elements[1]]
