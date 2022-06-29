@@ -18,9 +18,9 @@
         <th>Positive (1) or negative (0)</th>
         <th>Au/ml</th>
     </thead>
-    {% for key, values in final_dictionary.items %}
+    {% for list in final_list %}
     <tr>
-       {% for value in values %}
+       {% for value in list %}
         <td>{{value}}</td>
         {% endfor %}
     </tr>

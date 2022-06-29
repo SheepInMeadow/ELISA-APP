@@ -105,6 +105,12 @@ def Plate_layout(request):
     global check, totaal
     if request.method == 'POST':
         if request.POST.get('file_submit'):
+            totaal = []
+            if request.FILES.getlist("my_file") == []:
+                check = 'error'
+                return render(request, 'Plate_layout.html', {
+                    'check': check, 'totaal': totaal,
+                })
             excel_data = Plate_layout_1(request)
             totaal = Plate_layout_2(excel_data)
             check = 'go'
@@ -123,11 +129,6 @@ def Plate_layout(request):
 
 
 def Plate_layout_1(request):
-    if request.FILES.getlist("my_file") == []:
-        check = 'error'
-        return render(request, 'Plate_layout.html', {
-            'check': check,
-        })
     excel_file = request.FILES["my_file"]
     wb = openpyxl.load_workbook(excel_file)
     active_sheet = wb.active
@@ -270,7 +271,8 @@ def Visualize_data(request):
         })
     except:
         return render(request, 'Error.html', {
-            'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the Plate Layout page.',
+            'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the '
+                     'Plate Layout page.',
         })
 
 
@@ -411,7 +413,8 @@ def Cut_off(request):
         })
     except:
         return render(request, 'Error.html', {
-            'error': 'An error occurred, please be sure to select the plate with the healthy donor data on the Visualize data page.'
+            'error': 'An error occurred, please be sure to select the plate with the healthy donor data on the '
+                     'Visualize data page.'
         })
 
 
@@ -426,68 +429,74 @@ upper = 0.0
 
 
 def Intermediate_result(request):
-    global end_result
-    global lower
-    global upper
-    end_result = {}
-    for key, values in intermediate_dictionary.items():
-        if key not in delete:
-            end_result[key] = values
-    temp0 = []
-    temp1 = []
-    temp2 = []
-    temp3 = []
-    temp4 = []
-    for key, values in end_result.items():
-        mean_ST_dictionary[key].reverse()
-        top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
-        bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
-        string_top = formula2(top, *params_dictionary[key]) * int(end_dilution[3][3])
-        string_bot = formula2(bot, *params_dictionary[key]) * int(end_dilution[3][3])
-        for value in values:
-            if type(value[1]) == str:
-                if len(value) == 2:
-                    if float(value[1]) < bot:
-                        temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + [1])
+    try:
+        global end_result
+        global lower
+        global upper
+        end_result = {}
+        for key, values in intermediate_dictionary.items():
+            if key not in delete:
+                end_result[key] = values
+        temp0 = []
+        temp1 = []
+        temp2 = []
+        temp3 = []
+        temp4 = []
+        for key, values in end_result.items():
+            mean_ST_dictionary[key].reverse()
+            top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
+            bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
+            string_top = formula2(top, *params_dictionary[key]) * int(end_dilution[3][3])
+            string_bot = formula2(bot, *params_dictionary[key]) * int(end_dilution[3][3])
+            for value in values:
+                if type(value[1]) == str:
+                    if len(value) == 2:
+                        if float(value[1]) < bot:
+                            temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + [1])
+                        else:
+                            temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + [3])
                     else:
-                        temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + [3])
+                        value[2] = 1
+                        temp0.append(value)
+                elif int(value[1]) <= float(string_bot):
+                    if len(value) == 2:
+                        temp1.append(value + [1])
+                    else:
+                        value[2] = 1
+                        temp1.append(value)
+                elif int(value[1]) >= float(string_top):
+                    if len(value) == 2:
+                        temp3.append(value + [3])
+                    else:
+                        value[2] = 3
+                        temp3.append(value)
                 else:
-                    value[2] = 1
-                    temp0.append(value)
-            elif int(value[1]) <= float(string_bot):
-                if len(value) == 2:
-                    temp1.append(value + [1])
-                else:
-                    value[2] = 1
-                    temp1.append(value)
-            elif int(value[1]) >= float(string_top):
-                if len(value) == 2:
-                    temp3.append(value + [3])
-                else:
-                    value[2] = 3
-                    temp3.append(value)
-            else:
-                if len(value) == 2:
-                    temp2.append(value + [2])
-                else:
-                    value[2] = 2
-                    temp2.append(value)
-        mean_ST_dictionary[key].reverse()
-    sorted_temp1 = sorted(temp1, key=itemgetter(1))
-    sorted_temp2 = sorted(temp2, key=itemgetter(1))
-    sorted_temp3 = sorted(temp3, key=itemgetter(1))
-    lower = sorted_temp2[0][1]
-    upper = sorted_temp2[-1][1]
-    complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
-    if request.method == 'POST':
-        if request.POST.get('limit_submit'):
-            lower = request.POST.get('lower')
-            upper = request.POST.get('upper')
-    return render(request, 'Intermediate_result.html', {
-        'complete_list': complete_list,
-        'lower': lower,
-        'upper': upper,
-    })
+                    if len(value) == 2:
+                        temp2.append(value + [2])
+                    else:
+                        value[2] = 2
+                        temp2.append(value)
+            mean_ST_dictionary[key].reverse()
+        sorted_temp1 = sorted(temp1, key=itemgetter(1))
+        sorted_temp2 = sorted(temp2, key=itemgetter(1))
+        sorted_temp3 = sorted(temp3, key=itemgetter(1))
+        lower = sorted_temp2[0][1]
+        upper = sorted_temp2[-1][1]
+        complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
+        if request.method == 'POST':
+            if request.POST.get('limit_submit'):
+                lower = request.POST.get('lower')
+                upper = request.POST.get('upper')
+        return render(request, 'Intermediate_result.html', {
+            'complete_list': complete_list,
+            'lower': lower,
+            'upper': upper,
+        })
+    except:
+        return render(request, 'Error.html', {
+            'error': 'An error occurred, please make sure you have selected the the healthy donor plate and confirming '
+                     'your preferences on the visualize Data page.'
+        })
 
 
 intermediate_dictionary = {}
@@ -524,37 +533,46 @@ final_dictionary = {}
 
 
 def End_results(request):
-    global final_dictionary
-    if request.method == 'POST':
-        if request.POST.get('update_table'):
-            final_dictionary = {}
-            OD_multiplier = request.POST.get('OD_multiplier')
-            if len(end_result[HD][0]) == 2:
-                for keys, values in dictionary.items():
-                    if keys not in delete:
-                        counter = 0
-                        for OD_list in values[1:]:
-                            for OD in OD_list[3:]:
-                                end_result[keys][counter].append(OD)
-                                counter += 1
-            sampleID = 1
-            for keys, values in end_result.items():
-                if keys != HD:
-                    counter = 0
-                    counter2 = 0
-                    for elements in values:
-                        if counter < 5:
-                            if float(elements[1]) >= float(lower) and float(elements[1]) <= float(upper):
-                                if elements[2] >= float(cut_off_value):
-                                    if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
-                                        final_dictionary[sampleID] = [elements[0], 1, elements[1]]
-                            if sampleID not in final_dictionary:
-                                final_dictionary[sampleID] = [elements[0], 0, elements[1]]
-                            sampleID += 1
-                        counter += 1
-                        counter2 += 1
-                        if counter == 10:
+    try:
+        final_list = []
+        global final_dictionary
+        if request.method == 'POST':
+            if request.POST.get('update_table'):
+                final_dictionary = {}
+                OD_multiplier = request.POST.get('OD_multiplier')
+                if len(end_result[HD][0]) == 2:
+                    for keys, values in dictionary.items():
+                        if keys not in delete:
                             counter = 0
-    return render(request, 'End_results.html', {
-        'final_dictionary': final_dictionary,
-    })
+                            for OD_list in values[1:]:
+                                for OD in OD_list[3:]:
+                                    end_result[keys][counter].append(OD)
+                                    counter += 1
+                sampleID = 1
+                for keys, values in end_result.items():
+                    if keys != HD:
+                        counter = 0
+                        counter2 = 0
+                        for elements in values:
+                            if counter < 5:
+                                if float(elements[1]) >= float(lower): #and float(elements[1]) <= float(upper): ???? groter mocht ook een positive zijn?
+                                    if elements[2] >= float(cut_off_value):
+                                        if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
+                                            final_dictionary[sampleID] = [elements[0], 1, elements[1]]
+                                if sampleID not in final_dictionary:
+                                    final_dictionary[sampleID] = [elements[0], 0, elements[1]]
+                                sampleID += 1
+                            counter += 1
+                            counter2 += 1
+                            if counter == 10:
+                                counter = 0
+                for i, lists in final_dictionary.items():
+                    final_list.append(lists)
+                final_list = sorted(final_list, key=itemgetter(0))
+        return render(request, 'End_results.html', {
+            'final_list': final_list,
+        })
+    except:
+        return render(request, 'Error.html', {
+            'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
+        })

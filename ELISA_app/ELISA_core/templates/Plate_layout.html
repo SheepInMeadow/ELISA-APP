@@ -21,7 +21,6 @@
         ST values of all plates: <input type="number" name="standaard" class="plate_st_input" value="60"><br><br>
         <input type="submit" name="standaard_input" value="Update table" class="plate_table_button">
     </div>
-{% endif %}
 </form>
 {% for i in totaal %}
     <table>
@@ -34,4 +33,5 @@
         {% endfor %}
     </table>
 {% endfor %}
+{% endif %}
 {% endblock %}

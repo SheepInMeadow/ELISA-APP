@@ -11,7 +11,7 @@
         {% csrf_token %}
         <div class="dil_text">
             Give the dilution: <input type="number" name="dilution" class="dil" value="50">
-            <input type="submit" name="dilution_submit" class="dil_submit"><br><br>
+            <input type="submit" name="dilution_submit" class="dil_submit" value="Create table"><br><br>
         </div>
         <table class="dil_table">
             {% for x in end_list %}
