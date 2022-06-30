@@ -300,7 +300,7 @@ def create_graph(dictionary):
         counter += 1
     counter = 0
     for key in dictionary:
-        guess = [1, 1, 1, 1]
+        guess = [1, 1, 1, 1, 1]
         params, params_coveriance = optimization.curve_fit(formula, x_list, y_list[counter], guess)
         intermediate_list(key, params)
         x_min, x_max = np.amin(x_list), np.amax(x_list)
@@ -316,9 +316,8 @@ def create_graph(dictionary):
         plt.close()
         counter += 1
 
-def formula(x, A, B, C, D):
-    E = 1
-    return D + (A - D) / ((1.0 + ((x / C) ** (B) ** (E))))
+def formula(x, A, B, C, D, E):
+    return D + (A-D)/(np.power((1 + np.power((x/C), B)), E))
 
 mean = 0
 std = 0
@@ -418,9 +417,8 @@ def Cut_off(request):
         })
 
 
-def formula2(y, A, B, C, D):
-    E = 1
-    return C * (((A - D) / (-(D) + y)) ** (1 / E) - 1) ** (1 / B)
+def formula2(y, A, B, C, D, E):
+    return C*(np.power((np.power(((A-D)/(-D+y)), (1/E))-1), (1/B)))
 
 
 end_result = {}
@@ -558,9 +556,9 @@ def End_results(request):
                                 if float(elements[1]) >= float(lower): #and float(elements[1]) <= float(upper): ???? groter mocht ook een positive zijn?
                                     if elements[2] >= float(cut_off_value):
                                         if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
-                                            final_dictionary[sampleID] = [elements[0], 1, elements[1]]
+                                            final_dictionary[sampleID] = [elements[0], 1, round(elements[1])]
                                 if sampleID not in final_dictionary:
-                                    final_dictionary[sampleID] = [elements[0], 0, elements[1]]
+                                    final_dictionary[sampleID] = [elements[0], 0, round(elements[1])]
                                 sampleID += 1
                             counter += 1
                             counter2 += 1
