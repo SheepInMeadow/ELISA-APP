@@ -254,12 +254,16 @@ def Visualize_data(request):
             for j in lines[1:]:
                 if ',' in j:
                     new = float(j.replace(',', '.')) - mean
-                    temp.append(round(new, 3))
+                    c_color = 3 - new
+                    color = round(c_color)*85
+                    DCO = round(new, 3)
+                    temp.append([DCO, (color, 255, color)])
                 else:
-                    temp.append(j)
+                    temp.append([j, (255, 255, 255)])
                 counter += 1
                 if counter == 13:
                     nested.append(temp)
+                    print(temp)
                     counter = 0
                     temp = []
             dictionary[name] = nested
@@ -268,6 +272,8 @@ def Visualize_data(request):
             create_graph(dictionary)
         return render(request, 'Visualize_data.html', {
             'dictionary': dictionary,
+            'test1': (0,255,0),
+            'test2': [1,2,3,4],
         })
     except:
         return render(request, 'Error.html', {
@@ -289,7 +295,7 @@ def create_graph(dictionary):
     temp = []
     for values in dictionary.values():
         for elements in values[1:-1]:
-            mean = (float(elements[1] + float(elements[2]))/2)
+            mean = (float(elements[1][0] + float(elements[2][0]))/2)
             temp.append(round(mean, 3))
         y_list.append(temp)
         temp = []
@@ -384,7 +390,7 @@ def Cut_off(request):
         elif cut_data == []:
             for i in dictionary[HD][1:]:
                 for g in i[3:8]:
-                    cut_data.append(g)
+                    cut_data.append(g[0])
             cut_data.pop(0)
             cut_dict["OD"] = cut_data
             mean = round(statistics.mean(cut_data), 3)
@@ -517,9 +523,9 @@ def intermediate_list(key, params):
                 if values != 0:
                     for value in range(len(j[values])):
                         if value != 0 and value != 1 and value != 2:
-                            result = formula2(j[values][value], *params)
+                            result = formula2(j[values][value][0], *params)
                             if np.isnan(result):
-                                result = str(j[values][value])
+                                result = str(j[values][value][0])
                             else:
                                 result *= int(dilution)
                                 result = round(result, 3)
@@ -544,7 +550,7 @@ def End_results(request):
                             counter = 0
                             for OD_list in values[1:]:
                                 for OD in OD_list[3:]:
-                                    end_result[keys][counter].append(OD)
+                                    end_result[keys][counter].append(OD[0])
                                     counter += 1
                 sampleID = 1
                 for keys, values in end_result.items():

@@ -8,6 +8,7 @@
 <link rel="stylesheet" type="text/css"
           href="{% static 'css/Visualize_data.css' %}">
 <script src="{% static 'javascript/Visualize_data.js' %}"></script>
+
 <form method="POST">
     {% csrf_token %}
     {% for key, value_list in dictionary.items %}
@@ -20,8 +21,9 @@
                     {% for value in value_list %}
                         <tr>
                             {% for i in value %}
-                                <td id="{{i}}">{{i}}</td>
+                                <td style="background-color:rgb{{i.1}}">{{i.0}}</td>
                             {% endfor %}
+
                         </tr>
                     {% endfor %}
                 </table>
