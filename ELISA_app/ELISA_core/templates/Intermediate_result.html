@@ -6,8 +6,8 @@
 {% block content %}
     <form method="POST">
         {% csrf_token %}
-        <p class="spacing">Lower detection limit: <input type="number" name="lower" value="{{lower}}"></p>
-        <p class="spacing">Upper detection limit: <input type="number" name="upper" value="{{upper}}"></p>
+        <p class="spacing">Lower detection limit: <input type="number" name="lower"></p>
+        <p class="spacing">Upper detection limit: <input type="number" name="upper"></p>
         <input class="spacing" type="submit" value="Save limits" name="limit_submit">
     </form>
     <p class="spacing">
