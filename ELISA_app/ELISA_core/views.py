@@ -19,6 +19,11 @@ def Input_data(request):
     try:
         if request.method == 'POST':
             error = 'correct'
+            if request.POST.get('Empty database'):
+                Plates.objects.all().delete()
+                return render(request, 'Input_data.html', {
+                    'check': 'correct_emptied',
+                })
             if request.POST.get('file_submit'):
                 error = file_data(request)
             if error == "file" or error == "extension":
@@ -41,7 +46,7 @@ def file_data(request):
     if request.FILES.getlist('my_file') == []:
         return "file"
     for file in request.FILES.getlist('my_file'):
-        if str(file).split('.')[1] not in ['txt', 'xlsx']:
+        if str(file).split('.')[1] not in ['txt', 'xlsx', 'xls']:
             return 'extension'
     for file in request.FILES.getlist('my_file'):
         if str(file).split('.')[1] == 'txt':
@@ -51,6 +56,7 @@ def file_data(request):
         elif str(file).split('.')[1] == 'xlsx':
             data_string = formatting_xlsx(file)
             database(data_string, file)
+
 
 
 def formatting_txt(data, counter):
@@ -258,6 +264,12 @@ def Visualize_data(request):
                     color = round(c_color)*85
                     DCO = round(new, 3)
                     temp.append([DCO, (color, 255, color)])
+                elif '.' in j:
+                    new = float(j) - mean
+                    c_color = 3 - new
+                    color = round(c_color)*85
+                    DCO = round(new, 3)
+                    temp.append([DCO, (color, 255, color)])
                 else:
                     temp.append([j, (255, 255, 255)])
                 counter += 1
@@ -272,8 +284,6 @@ def Visualize_data(request):
             create_graph(dictionary)
         return render(request, 'Visualize_data.html', {
             'dictionary': dictionary,
-            'test1': (0,255,0),
-            'test2': [1,2,3,4],
         })
     except:
         return render(request, 'Error.html', {
@@ -295,7 +305,7 @@ def create_graph(dictionary):
     temp = []
     for values in dictionary.values():
         for elements in values[1:-1]:
-            mean = (float(elements[1][0] + float(elements[2][0]))/2)
+            mean = ((float(elements[1][0]) + float(elements[2][0]))/2)
             temp.append(round(mean, 3))
         y_list.append(temp)
         temp = []
@@ -424,7 +434,7 @@ def Cut_off(request):
 
 
 def formula2(y, A, B, C, D, E):
-    return C*(np.power((np.power(((A-D)/(-D+y)), (1/E))-1), (1/B)))
+    return C*(np.power((np.power(((A-D)/(-D+float(y))), (1/E))-1), (1/B)))
 
 
 end_result = {}
@@ -493,8 +503,6 @@ def Intermediate_result(request):
                 upper = request.POST.get('upper')
         return render(request, 'Intermediate_result.html', {
             'complete_list': complete_list,
-            'lower': lower,
-            'upper': upper,
         })
     except:
         return render(request, 'Error.html', {
@@ -534,18 +542,34 @@ def intermediate_list(key, params):
 
 
 final_dictionary = {}
+final_list = []
+cut_off_value_au = 0
 
 
 def End_results(request):
     try:
-        final_list = []
+        global final_list
+        global cut_off_value_au
         global final_dictionary
         if request.method == 'POST':
+            if request.POST.get('Empty database'):
+                Plates.objects.all().delete()
+            if request.POST.get('download'):
+                file_name = request.POST.get('File_name')
+                textfile = open("../Download_files/" + file_name + ".txt", "w")
+                for elements in final_list:
+                    for element in elements:
+                        textfile.write(str(element) + "\t")
+                    textfile.write("\n")
+                textfile.close()
             if request.POST.get('update_table'):
                 final_dictionary = {}
                 OD_multiplier = request.POST.get('OD_multiplier')
                 if len(end_result[HD][0]) == 2:
                     for keys, values in dictionary.items():
+                        if keys == HD:
+                            params = params_dictionary[HD]
+                            cut_off_value_au = formula2(float(cut_off_value), *params) * int(end_dilution[3][3])
                         if keys not in delete:
                             counter = 0
                             for OD_list in values[1:]:
@@ -553,18 +577,22 @@ def End_results(request):
                                     end_result[keys][counter].append(OD[0])
                                     counter += 1
                 sampleID = 1
+                final_list = []
                 for keys, values in end_result.items():
                     if keys != HD:
                         counter = 0
                         counter2 = 0
                         for elements in values:
                             if counter < 5:
-                                if float(elements[1]) >= float(lower): #and float(elements[1]) <= float(upper): ???? groter mocht ook een positive zijn?
-                                    if elements[2] >= float(cut_off_value):
+                                if float(elements[1]) >= float(lower):
+                                    if elements[1] >= float(cut_off_value_au):
                                         if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
                                             final_dictionary[sampleID] = [elements[0], 1, round(elements[1])]
                                 if sampleID not in final_dictionary:
-                                    final_dictionary[sampleID] = [elements[0], 0, round(elements[1])]
+                                    if float(elements[1]) < float(lower):
+                                        final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower)]
+                                    else:
+                                        final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1]))]
                                 sampleID += 1
                             counter += 1
                             counter2 += 1
@@ -575,6 +603,8 @@ def End_results(request):
                 final_list = sorted(final_list, key=itemgetter(0))
         return render(request, 'End_results.html', {
             'final_list': final_list,
+            'lower': lower,
+            'cut_off_value': round(cut_off_value_au),
         })
     except:
         return render(request, 'Error.html', {
