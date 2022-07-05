@@ -34,3 +34,9 @@
     text-align: center;
     font-size: 25px;
 }
+
+.middle {
+    position: absolute;
+    margin-left: 17%;
+    margin-top: 2%;
+}
