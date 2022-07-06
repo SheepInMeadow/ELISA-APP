@@ -12,12 +12,16 @@
         <div class="input_text">Submit your data here:</div><br>
         <input type="file" name="my_file" class="input_file" multiple/>
         <input type="submit" name="file_submit" value="Upload data" class="input_button_file"/>
+        <input type="submit" value="Empty database" name="Empty database">
     </form>
     {% if check == 'file' %}
         <p class="message_fail">No files were selected, please try again.</p>
     {% endif %}
     {% if check == 'correct' %}
         <p class="message_succes">Data was succesfully uploaded.</p>
+    {% endif %}
+    {% if check == 'correct_emptied' %}
+        <p class="message_succes">Table in database was succesfully emptied.</p>
     {% endif %}
     {% if check == 'extension' %}
         <p class="message_fail">Wrong file(s) were submitted, please try again. (allowed file types are .txt and .xlsx)</p>
