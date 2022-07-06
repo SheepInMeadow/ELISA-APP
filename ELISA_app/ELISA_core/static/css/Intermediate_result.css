@@ -1,12 +1,21 @@
 .spacing {
-    margin-left: 5px;
+    margin-left: 2%;
+    font-size: 15pt;
     font-family: "Arial", serif;
 }
 
-td, th {
-    border: 1px solid grey;
+.input_limit {
+    font-size: 15pt;
+    font-family: "Arial", serif;
 }
 
 table {
+    color: #333;
+    background: white;
+    border: 1px solid grey;
+    border-collapse: collapse;
+}
+
+td, th {
     border: 1px solid grey;
 }
