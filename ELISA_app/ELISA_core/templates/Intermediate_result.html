@@ -6,14 +6,14 @@
 {% block content %}
     <form method="POST">
         {% csrf_token %}
-        <p class="spacing">Lower detection limit: <input type="number" name="lower"></p>
-        <p class="spacing">Upper detection limit: <input type="number" name="upper"></p>
+        <p class="spacing">Lower detection limit: <input type="number" name="lower" class="input_limit"></p>
+        <p class="spacing">Upper detection limit: <input type="number" name="upper" class="input_limit"></p>
         <input class="spacing" type="submit" value="Save limits" name="limit_submit">
     </form>
     <p class="spacing">
-        1: Au/ml under lower detection limit<br>
-        2: Au/ml in between lower and upper detection limit<br>
-        3: Au/ml over upper detection limit<br>
+        1: Au/ml under linear part of calibration line<br>
+        2: Au/ml on linear part of calibration line<br>
+        3: Au/ml over linear part of calibration line<br>
     </p>
     <table class="spacing">
         <thead>
