@@ -12,10 +12,31 @@ from operator import itemgetter
 
 
 def Home(request):
+    """
+    Input:
+        - request: Catches submits from template.
+    Output:
+        -
+    Function:
+        - Renders the template Home.html when the page is visited.
+    """
     return render(request, 'Home.html')
 
 
 def Input_data(request):
+    """
+    Input:
+        - request: Catches submits from template
+    Output:
+        -
+    Function:
+        - Checks if the user clicked the button to empty the database and then renders the page with a message
+          indicating that it was succesfullly emptied. Then checks for if there were any files submitted, if so it will
+          send the data to the file_data() function. The variable error is then used to determine if the submitted files
+          were incorrectly formatted and shows the corresponding error on the page. If all is ok the page renders with
+          a message to inform the user of this. If any other error occurs which is not properly caught, the page will
+          still render and inform the user something went wrong.
+    """
     try:
         if request.method == 'POST':
             error = 'correct'
@@ -43,6 +64,18 @@ def Input_data(request):
 
 
 def file_data(request):
+    """
+    Input:
+        - request: Catches submits from template.
+    Output:
+        - 'file': A string that is used on the Input_data.html to show a specific error message.
+        - 'extension': A string that is used on the Input_data.html to show a specific error message.
+    Function:
+        - If there are no files selected but the user did click the submit button a string will be returned to
+          catch this error. If the user did submit files they are then checked on proper formatting, if not a string
+          will be returned to catch this error. If these two checks are passed the files are then passed on to a
+          corresponding function that handles the specific extension.
+    """
     if request.FILES.getlist('my_file') == []:
         return "file"
     for file in request.FILES.getlist('my_file'):
@@ -60,6 +93,16 @@ def file_data(request):
 
 
 def formatting_txt(data, counter):
+    """
+    Input:
+        - data: Nested list with all the rows from a submitted .txt file.
+        - counter: A number that is used to differentiate files that need to be decoded.
+    Output:
+        - data_string: Formatted string with all values seperated by a special character.
+    Function:
+        - Reads in the data from a nested list and formats it in a way so it can be used in a single long string.
+          This string is then returned to the function file_data()
+    """
     lines, data_string, formatted_data = list(), "", list()
     for i in data[:-1]:
         if counter == 1:
@@ -77,6 +120,16 @@ def formatting_txt(data, counter):
 
 
 def formatting_xlsx(file_name):
+    """
+    Input:
+        - file_name: A string that contains the name of a specific file.
+    Output:
+        - data_string: A formatted string with all values seperated by a special character.
+    Function:
+        - Opens an excel workbook and reads in all the cells from a specific worksheet. By formatting all the rows
+          to the same length it can then be used to generate the data_string that is then returned to the file_data()
+          function.
+    """
     wb = openpyxl.load_workbook(file_name)
     active_sheet = wb.active
     excel_data, data_string = list(), ""
@@ -95,6 +148,16 @@ def formatting_xlsx(file_name):
 
 
 def database(data_string, file):
+    """
+    Input:
+        - data_string: A formatted string with all values seperated by a special character.
+        - file: A string that contains the name of a specific file.
+    Output:
+        -
+    Function:
+        - In this function the data_string gets split up in elements by using the special character as seperator.
+          These elements are then used to fill in the table in the database.
+    """
     split = data_string.split('=')
     plates_instance = Plates.objects.create(
         id=file,
@@ -108,6 +171,23 @@ check = ''
 
 
 def Plate_layout(request):
+    """
+    Input:
+        - request: Catches submits from template.
+        - totaal: An empty list.
+        - check: An empty string.
+    Output:
+        - totaal: A nested list with submitted data from a plate layout file.
+        - check: A variable that is used to check if the data is properly read and ready to be formatted into a table.
+    Function:
+        - This function checks if the user has submitted a plate layout file. If they did not the page will be rendered
+          with an error message telling the user to select a file. If the user did select and submit a file it will be
+          passed onto the Plate_layout_1() en Plate_layout_2() function. Afterwards it will rerender the page and
+          generate a table containing the data from the file. If the user then fills in the input field and submits
+          this value by clicking the button, it will reload the page and automatically fill in the ST values from top
+          to bottom. If no button was pressed the template simply renders with only the file input field and submit
+          button.
+    """
     global check, totaal
     if request.method == 'POST':
         if request.POST.get('file_submit'):
@@ -135,6 +215,15 @@ def Plate_layout(request):
 
 
 def Plate_layout_1(request):
+    """
+    Input:
+        - request: Catches submits from template.
+    Output:
+        - excel_data: A nested list with the data from a plate layout file.
+    Function:
+        - This function reads the submitted file and converts it to a nested list with all the data from that specific
+          file. This nested list is then returned to the Plate_layout() function.
+    """
     excel_file = request.FILES["my_file"]
     wb = openpyxl.load_workbook(excel_file)
     active_sheet = wb.active
@@ -151,6 +240,17 @@ def Plate_layout_1(request):
 
 
 def Plate_layout_2(excel_data):
+    """
+    Input:
+        - excel_data: A nested list with the data from a plate layout file.
+    Output:
+        - totaal: A nested list with the data from a plate layout file that is properly formatted and stripped of
+          None's.
+    Function:
+        - This function reads every line in the nested list excel_data and deletes all the None's then inserts values
+          so the lists have the same length. Finally it appends the formatted lists to the nested totaal list and
+          returns this nested list to the Plate_layout() function.
+    """
     temp, counter = [], 0
     for i in excel_data:
         i = [e for e in i if e not in ('None')]
@@ -167,6 +267,16 @@ def Plate_layout_2(excel_data):
 
 
 def Plate_layout_3(request):
+    """
+    Input:
+        - request: Catches submits from template.
+    Output:
+        -
+    Function:
+        - This function retrieves the submitted ST value the user inputted. This value is then used and divided by two
+          for every row in the plate layout file. The last row get a # as value since these values are supposed to be
+          zero. When clicking the submit button the page gets reloaded and the table gets filled, so there is no return.
+    """
     values = request.POST.get('standaard')
     counter, counter2 = 0, 0
     for i in totaal:
@@ -189,6 +299,17 @@ end_dilution = []
 # je kan hier nog een enkele waarde aanpassen door per regel te checken
 # wat voor letter is ingevoerd en dan de positie pakken
 def Dilutions(request):
+    """
+    Input:
+        - request: Catches submit from template.
+        - end_dilution: An empty list
+    Output:
+        - end_dilution: A nested list with the dilution of the plate. The values are all numbers with as type string.
+    Function:
+        - the function checks if the dilution is submitted and creates header lists for the nested list end_dilution.
+          The function Dilutions_1 is called and given multiple variables. The returned list is added to the nested
+          list and returned to the template.
+    """
     global end_dilution
     if request.method == 'POST':
         if request.POST.get('dilution_submit'):
@@ -209,6 +330,18 @@ def Dilutions(request):
 
 
 def Dilutions_1(i, temp, row_names, dilution):
+    """
+    Input:
+        - i: An integer which ranges from one to eight.
+        - temp: An empty list
+        - row_names: A list with the first letter each row needs.
+        - dilution: The dilution value.
+    Output:
+        - temp: A list with the dilution values of a row. The values are all numbers with as type string.
+    Function:
+        - The function decides which value gets added to the temp list. A total of 13 strings are added to the temp
+          list.
+    """
     for x in range(13):
         if i == 0:
             if x == 0:
@@ -233,6 +366,31 @@ points_dictionary = {}
 
 
 def Visualize_data(request):
+    """
+    Input:
+        - request: Catches submits from template.
+        - dictionary: An empty dictionary.
+        - HD: An empty string.
+        - delete: An empty list.
+        - points_dictionary: An empty dictionary.
+        - totaal: A nested list with the data from a plate layout file that is properly formatted and stripped of
+          None's.
+    Output:
+        - dictionary: A dictionary with as key the plate names and the value a nested list with in it the OD and RBG
+          code.
+        - delete: A list with selected plate names which are not allowed in end results.
+        - HD: A string with the name of the healthy donor plate.
+        - points_dictionary: A dictionary with as key the name of the plate and as value a list of the chosen lower and
+          upper points of that plate.
+    Function:
+        - In this function a dictionary is created to save the chosen lower and upper points of the linear part in
+          specific graph. This is saved in the dictionary points_dictionary. Then all the data from the database is
+          loaded in and the background noise is calculated and deducted from every single cell. Then a RGB code is
+          calculated to use in the table on the page. All the calculated variables are then stored in the 'dictionary'.
+          if the global totaal is not empty the create_graph() function is called. The page is then rendered and will
+          generate tables, graphs, checkboxes and dropdowns. If any of the code raises and error it is caught with the
+          except statement. This will then render an error on the page itself without any of the tables or graphs.
+    """
     try:
         global dictionary
         global HD
