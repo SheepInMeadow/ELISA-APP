@@ -347,11 +347,32 @@ cut_off_value = 0.0
 def Cut_off(request):
     """
     Input:
-
+        - request: Catches submits form template.
+        - mean: Has a zero number.
+        - std: Has a zero number.
+        - mean2: Has a zero number.
+        - std2: Has a zero number.
+        - cut_data: An empty list
+        - check_cut_off: The string false
+        - outlier_value: A float with zero
+        - cut_off_value: A float with zero
+        - dictionary: A dictionary with as key the plate names and the value a nested list with in it the OD and RBG code.
+        - HD: An string with the name of the selected healthy donor plate.
     Output:
-
+        - request: Catches submits form template.
+        - mean: Here comes the average score for the outlier.
+        - std: Here comes the std score for the outlier
+        - mean2: Here comes the average score for the cut-off.
+        - std2: Here comes the std score for the cut-off
+        - cut_data: Here comes a list with the OD scores from the healthy donor plate
+        - check_cut_off: A string with True
+        - outlier_value: A value with the outlier score
+        - cut_off_value: A value with the cut-off value
     Function:
-
+        -This function checks if a button is pressed if not than it will create the first swarm plot for the outliers.
+         When a button is pressed it will look into which button was pressed. IF the outlier_submit button was pressed.
+         Then it will create the swarm plot for te cut-ff. If the button from cut_off_submit was pressed a cut-off is
+         calculated.
     """
     try:
         global mean
@@ -442,14 +463,6 @@ def Cut_off(request):
 
 
 def formula2(y, A, B, C, D, E):
-    """
-    Input:
-
-    Output:
-
-    Function:
-
-    """
     return C*(np.power((np.power(((A-D)/(-D+float(y))), (1/E))-1), (1/B)))
 
 
@@ -465,7 +478,8 @@ def Intermediate_result(request):
         - end_result: An empty dictionary.
         - lower: The number zero.
         - upper: The number zero.
-       - points_dictionary: A dictionary with as key the name of the plate and as value a list of the chosen lower and
+        - HD: An string with the name of the selected healthy donor plate.
+        - points_dictionary: A dictionary with as key the name of the plate and as value a list of the chosen lower and
                             upper points of that plate.
         - intermediate_dictionary: A dictionary with as keys the plates names and the value a nested list. With in it
           a sample ID and the calculated au/ml.
@@ -609,6 +623,7 @@ def End_results(request):
     """
     Input:
         - request: Catches submits form template.
+        - HD: An string with the name of the selected healthy donor plate.
         - final_dictionary: An empty dictionarty list.
         - final_list: An empty list.
         - cut_off_value_au: The number zero.
