@@ -526,6 +526,35 @@ outlier_value = 0.0
 cut_off_value = 0.0
 
 def Cut_off(request):
+    """
+    Input:
+        - request: Catches submits form template.
+        - mean: Has a zero number.
+        - std: Has a zero number.
+        - mean2: Has a zero number.
+        - std2: Has a zero number.
+        - cut_data: An empty list
+        - check_cut_off: The string false
+        - outlier_value: A float with zero
+        - cut_off_value: A float with zero
+        - dictionary: A dictionary with as key the plate names and the value a nested list with in it the OD and RBG code.
+        - HD: An string with the name of the selected healthy donor plate.
+    Output:
+        - request: Catches submits form template.
+        - mean: Here comes the average score for the outlier.
+        - std: Here comes the std score for the outlier
+        - mean2: Here comes the average score for the cut-off.
+        - std2: Here comes the std score for the cut-off
+        - cut_data: Here comes a list with the OD scores from the healthy donor plate
+        - check_cut_off: A string with True
+        - outlier_value: A value with the outlier score
+        - cut_off_value: A value with the cut-off value
+    Function:
+        -This function checks if a button is pressed if not than it will create the first swarm plot for the outliers.
+         When a button is pressed it will look into which button was pressed. IF the outlier_submit button was pressed.
+         Then it will create the swarm plot for te cut-ff. If the button from cut_off_submit was pressed a cut-off is
+         calculated.
+    """
     try:
         global mean
         global std
@@ -637,6 +666,32 @@ upper = 0.0
 
 
 def Intermediate_result(request):
+    """
+    Input:
+        - request: Catches submits form template.
+        - end_result: An empty dictionary.
+        - lower: The number zero.
+        - upper: The number zero.
+        - HD: An string with the name of the selected healthy donor plate.
+        - points_dictionary: A dictionary with as key the name of the plate and as value a list of the chosen lower and
+                            upper points of that plate.
+        - intermediate_dictionary: A dictionary with as keys the plates names and the value a nested list. With in it
+          a sample ID and the calculated au/ml.
+        - delete: A list with selected plate names which are not allowed in end results.
+        - mean_ST_dictionary: A dictionary with as key the names of the plates and the value the average score of ODs.
+        - end_dilution: A nested list with the dilution of the plates. the values are all numbers with as type string.
+    Output:
+        - end_result: A dictionary with as key the name of the plates and the values a nested list. the nested list
+                      have as values first a sample id, second the au/ml, and third a 1 or 2 or 3.
+        - lower: An au/ml score from the lowest chosen value.
+        - upper: An au/ml score from the highest chosen value.
+    Function:
+        - The fuction first checks which plates it should not to be looking if the plate names in intermediate_dictionary
+          are in delete. Then it looks what the values are of the highest chosen value and lowest chosen value. After that
+          it will look if the values from end_result are smaller or bigger then lower or upper. If the value is smaller
+          than lower it gets a 1, if higher than upper it gets a 3. If nether than it gets a 2. When the list is filled
+          it gets sorted by sample ID and everything gets put into one list.
+    """
     try:
         global end_result
         global lower
@@ -710,6 +765,24 @@ params_dictionary = {}
 
 
 def intermediate_list(key, params):
+    """
+    Input:
+        - key: A string with the name of the plate.
+        - params: The optimal values for the curve fit. A: minimal asymptote, B: steepness, C: inflection point
+                 D: maximal asymptote, E: Asymmetry factor.
+        - intermediate_dictionary: An empty dictionary.
+        - params_dictionary: An Empty dictionary.
+        - totaal: Nested list with submitted data from a plate_layout file.
+        - end_dilution: A nested list with the dilution of the plates. the values are all numbers with as type string.
+    Output:
+        - intermediate_dictionary: A dictionary with as keys the plates names and the value a nested list. With in it
+          a sample ID and the calculated au/ml.
+        - params_dictionary: In this dictionary the keys are the name of the plates and the values the params.
+    Function:
+            - First the function takes a look which plate from visualize data belongs with the plate from
+              plate-layout by comparing the number in de plate name. then it save the params in the params_dictionary
+              and calls the formula2 function, so the result can be multiplied by the dilution score to get the au/ml.
+    """
     global intermediate_dictionary
     for options in range(len(totaal)):
         num1 = int(''.join(filter(str.isdigit, key)))
@@ -741,6 +814,36 @@ cut_off_value_au = 0
 
 
 def End_results(request):
+    """
+    Input:
+        - request: Catches submits form template.
+        - HD: An string with the name of the selected healthy donor plate.
+        - final_dictionary: An empty dictionarty list.
+        - final_list: An empty list.
+        - cut_off_value_au: The number zero.
+        - dictionary: A dictionary with as key the plate names and the value a nested list with in it the OD and RBG code.
+        - cut_off_value: It has contains a float which is the OD given by the cut_off function
+        - params_dictionary: In this dictionary the keys are the name of the plates and the values the params.
+        - end_dilution: A nested list with the dilution of the plates. the values are all numbers with as type string.
+        - end_result: A dictionary with as key the name of the plates and the values a nested list. the nested list
+                      have as values first a sample id, second the au/ml, and third a 1 or 2 or 3.
+        - lower: An au/ml score.
+        - delete: A list with selected plate names which are not allowed in end results.
+    Output:
+        - final_dictionary: The dictionary is now filled and has as key sampleID which start with 1 and goes up by 1
+                            with every now result. the values are a list with as first a sample id, second an 1 or 2,
+                            and third the au/ml.
+        - final_list: A list with as first a sample id, second an 1 or 2 and third the au/ml.
+        - cut_off_value_au: An au/ml, calculated from the OD from cut_off_value and the params from params_dictionary.
+        - end_result: A dictionary with as key the name of the plates and the values a nested list. the nested list
+                      have as values first a sample id, second the au/ml, and third a 1 or 2 or 3.
+    Function:
+        - The function first checks if any button was pressed, if their were any buttons pressed it then check which.
+          After checking which buttons where pressed it will fill up the final_dictionary and final_list by checking
+          if they pass any off the requirement given by the if-statement. If all the requirements are met then the list
+          is given an 1, if they are not met then the list gets an 0. After the list is filled and sorted
+          the list is given to the render.
+    """
     try:
         global final_list
         global cut_off_value_au
