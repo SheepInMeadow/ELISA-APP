@@ -79,7 +79,7 @@ def file_data(request):
     if request.FILES.getlist('my_file') == []:
         return "file"
     for file in request.FILES.getlist('my_file'):
-        if str(file).split('.')[1] not in ['txt', 'xlsx', 'xls']:
+        if str(file).split('.')[1] not in ['txt', 'xlsx']:
             return 'extension'
     for file in request.FILES.getlist('my_file'):
         if str(file).split('.')[1] == 'txt':
@@ -296,8 +296,7 @@ def Plate_layout_3(request):
 
 end_dilution = []
 
-# je kan hier nog een enkele waarde aanpassen door per regel te checken
-# wat voor letter is ingevoerd en dan de positie pakken
+
 def Dilutions(request):
     """
     Input:
@@ -433,7 +432,6 @@ def Visualize_data(request):
                 counter += 1
                 if counter == 13:
                     nested.append(temp)
-                    print(temp)
                     counter = 0
                     temp = []
             dictionary[name] = nested
@@ -454,6 +452,18 @@ mean_ST_dictionary = {}
 
 
 def create_graph(dictionary):
+    """
+    Input:
+        - dictionary: A dictionary with as key the plate names and the value a nested list with in it the OD and RBG
+          code.
+    Output:
+        - mean_ST_dictionary: A dictionary with as key the names of the plates and the value the average score of ODs.
+    Function:
+        - This function manages the proper formatting of all the data that is needed to create a graph per plate. This
+          is done by creating the global dictionary mean_ST_dictionary. The name of the plate is used as key and the
+          value consists of a list calculated average ST values of each row. This data is then used to create each
+          graph.
+    """
     conc = totaal[0][2][1]
     x_list = [conc]
     for i in range(6):
@@ -491,6 +501,19 @@ def create_graph(dictionary):
         counter += 1
 
 def formula(x, A, B, C, D, E):
+    """
+    Input:
+        - x: A given x-value.
+        - A: Value of minimal asymptote.
+        - B: Value of steepness.
+        - C: Value of inflection point.
+        - D: Value of maximal asymptote.
+        - E: Value of asymmetry factor.
+    Output:
+        - return: A y-value for a given x-value.
+    Function:
+        - This function returns the y-value (OD) of a given x-value (concentration).
+    """
     return D + (A-D)/(np.power((1 + np.power((x/C), B)), E))
 
 mean = 0
@@ -592,6 +615,19 @@ def Cut_off(request):
 
 
 def formula2(y, A, B, C, D, E):
+    """
+    Input:
+        - y: A given y-value.
+        - A: Value of minimal asymptote.
+        - B: Value of steepness.
+        - C: Value of inflection point.
+        - D: Value of maximal asymptote.
+        - E: Value of asymmetry factor.
+    Output:
+        - return: A x-value for a given y-value.
+    Function:
+        - This function returns the x-value (concentration) of a given y-value (OD).
+    """
     return C*(np.power((np.power(((A-D)/(-D+float(y))), (1/E))-1), (1/B)))
 
 
@@ -664,7 +700,7 @@ def Intermediate_result(request):
         })
     except:
         return render(request, 'Error.html', {
-            'error': 'An error occurred, please make sure you have selected the the healthy donor plate and confirming '
+            'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
                      'your preferences on the visualize Data page.'
         })
 
