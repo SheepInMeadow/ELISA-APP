@@ -260,6 +260,7 @@ def Plate_layout_1(request):
     for row in active_sheet.iter_rows():
         row_data = list()
         for cell in row:
+            print(cell.value)
             if type(cell.value) == float:
                 row_data.append(str(round(cell.value)))
             else:
@@ -281,18 +282,27 @@ def Plate_layout_2(excel_data):
           returns this nested list to the Plate_layout() function.
     """
     temp, counter = [], 0
+    length_empty = 0
     for i in excel_data:
-        i = [e for e in i if e not in ('None')]
-        if len(i) != 0:
+        k = [e for e in i if e not in ('None')]
+        print(length_empty)
+        if length_empty != 0 and len(k) != 0:
+            for g in range(length_empty):
+                if k[0].isalpha():
+                    if i[g] == 'None':
+                        k.insert(g, 'Empty')
+        if len(k) != 0:
             if counter == 1:
-                i.insert(0, '#')
-            temp.append(i)
+                k.insert(0, '#')
+                length_empty = len(k)
+            temp.append(k)
             counter += 1
             if counter == 10:
                 totaal.append(temp)
                 counter = 0
                 temp = []
     return totaal
+
 
 
 def Plate_layout_3(request):
