@@ -1,4 +1,4 @@
-# BPEXI
+# ELISA App
 A tool for processing ELISA Reader output, developed for the Rheumatology department at Leiden University Medical Centre.
 
 
