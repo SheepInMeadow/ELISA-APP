@@ -3,7 +3,7 @@ from .models import Plates
 import openpyxl
 import seaborn as sns
 import pandas as pd
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
@@ -11,6 +11,10 @@ import statistics
 from operator import itemgetter
 import xlrd
 
+
+#Make multithreading safe
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 # session = {totaal : [], 'check' : '', 'end_dilution' : [], 'dictionary' : {},             for perhaps use in database
 #            'HD' : '', 'delete' : [], 'points_dictionary' : {},
