@@ -9,6 +9,7 @@ import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
 import statistics
 from operator import itemgetter
+import pickle #dump session globals
 
 #Make multithreading safe
 matplotlib.use('Agg')
@@ -58,6 +59,11 @@ def Home(request):
     Function:
         - Renders the template Home.html when the page is visited.
     """
+    if request.method == 'POST':
+        if request.POST.get('download_pickle'):
+            session_writeout()
+        elif request.POST.get('submit_pickle'):
+            session_readin(request.FILES['my_pickle'])
     return render(request, 'Home.html')
 
 
@@ -847,66 +853,89 @@ def End_results(request):
           is given an 1, if they are not met then the list gets an 0. After the list is filled and sorted
           the list is given to the render.
     """
-    try:
-        global final_list
-        global cut_off_value_au
-        global final_dictionary
-        if request.method == 'POST':
-            if request.POST.get('Empty database'):
-                Plates.objects.all().delete()
-            if request.POST.get('download'):
-                file_name = request.POST.get('File_name')
-                textfile = open("../Download_files/" + file_name + ".txt", "w")
-                for elements in final_list:
-                    for element in elements:
-                        textfile.write(str(element) + "\t")
-                    textfile.write("\n")
-                textfile.close()
-            if request.POST.get('update_table'):
-                final_dictionary = {}
-                OD_multiplier = request.POST.get('OD_multiplier')
-                if len(end_result[HD][0]) == 2:
-                    for keys, values in dictionary.items():
-                        if keys == HD:
-                            params = params_dictionary[HD]
-                            cut_off_value_au = formula2(float(cut_off_value), *params) * int(end_dilution[3][3])
-                        if keys not in delete:
-                            counter = 0
-                            for OD_list in values[1:]:
-                                for OD in OD_list[3:]:
-                                    end_result[keys][counter].append(OD[0])
-                                    counter += 1
-                sampleID = 1
-                final_list = []
-                for keys, values in end_result.items():
-                    if keys != HD:
+#    try:
+    global final_list
+    global cut_off_value_au
+    global final_dictionary
+    if request.method == 'POST':
+        if request.POST.get('Empty database'):
+            Plates.objects.all().delete()
+        if request.POST.get('download'):
+            session_writeout()
+            """
+            file_name = request.POST.get('File_name')
+            textfile = open("../Download_files/" + file_name + ".txt", "w")
+            for elements in final_list:
+                for element in elements:
+                    textfile.write(str(element) + "\t")
+                textfile.write("\n")
+            textfile.close()
+            """
+        if request.POST.get('update_table'):
+            final_dictionary = {}
+            OD_multiplier = request.POST.get('OD_multiplier')
+            if len(end_result[HD][0]) == 2:
+                for keys, values in dictionary.items():
+                    if keys == HD:
+                        params = params_dictionary[HD]
+                        cut_off_value_au = formula2(float(cut_off_value), *params) * int(end_dilution[3][3])
+                    if keys not in delete:
                         counter = 0
-                        counter2 = 0
-                        for elements in values:
-                            if counter < 5:
-                                if float(elements[1]) >= float(lower):
-                                    if elements[1] >= float(cut_off_value_au):
-                                        if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
-                                            final_dictionary[sampleID] = [elements[0], 1, round(elements[1])]
-                                if sampleID not in final_dictionary:
-                                    if float(elements[1]) < float(lower):
-                                        final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower)]
-                                    else:
-                                        final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1]))]
-                                sampleID += 1
-                            counter += 1
-                            counter2 += 1
-                            if counter == 10:
-                                counter = 0
-                for i, lists in final_dictionary.items():
-                    final_list.append(lists)
-                final_list = sorted(final_list, key=itemgetter(0))
-        return render(request, 'End_results.html', {
-            'final_list': final_list,
-            'lower': lower,
-            'cut_off_value': round(cut_off_value_au),
-        })
-    except:
-        return render(request, 'Error.html', {
-            'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
-        })
+                        for OD_list in values[1:]:
+                            for OD in OD_list[3:]:
+                                end_result[keys][counter].append(OD[0])
+                                counter += 1
+            sampleID = 1
+            final_list = []
+            for keys, values in end_result.items():
+                if keys != HD:
+                    counter = 0
+                    counter2 = 0
+                    for elements in values:
+                        if counter < 5:
+                            if float(elements[1]) >= float(lower):
+                                if elements[1] >= float(cut_off_value_au):
+                                    if (values[counter2][2]) / (values[counter2 + 5][2]) >= int(OD_multiplier):
+                                        final_dictionary[sampleID] = [elements[0], 1, round(elements[1])]
+                            if sampleID not in final_dictionary:
+                                if float(elements[1]) < float(lower):
+                                    final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower)]
+                                else:
+                                    final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1]))]
+                            sampleID += 1
+                        counter += 1
+                        counter2 += 1
+                        if counter == 10:
+                            counter = 0
+            for i, lists in final_dictionary.items():
+                final_list.append(lists)
+            final_list = sorted(final_list, key=itemgetter(0))
+    return render(request, 'End_results.html', {
+        'final_list': final_list,
+        'lower': lower,
+        'cut_off_value': round(cut_off_value_au),
+    })
+#    except:
+#        return render(request, 'Error.html', {
+#            'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
+#        })
+
+def session_writeout(): #unify outlist order and inlist, zip pickles and varname to prevent ref issues in mem
+    with open("session", 'wb') as f:
+        pickle.dump((totaal, check, end_dilution, dictionary, HD, delete, points_dictionary, mean_ST_dictionary, mean,
+                     std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
+                     intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au), f)
+        print("pickle succes")
+
+def session_readin(session):
+    varlist = (
+    "totaal", "check", "end_dilution", "dictionary", "HD", "delete", "points_dictionary", "mean_ST_dictionary", "mean",
+    "std", "mean2", "std2", "check_cut_off", "cut_data", "outlier_value", "cut_off_value", "end_result", "lower",
+    "upper", "intermediate_dictionary", "params_dictionary", "final_dictionary", "final_list", "cut_off_value_au")
+    with session as f:
+        sessiontuple = pickle.load(f)
+        print(end="\n\n\n")
+        for i in sessiontuple:
+            print(i, end="\n\n")
+    #lowkey should not be doing this but it's a lot cleaner
+    print("glob", globals()['outlier_value'])
