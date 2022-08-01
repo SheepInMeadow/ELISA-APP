@@ -9,6 +9,8 @@ import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
 import statistics
 from operator import itemgetter
+import xlrd
+
 
 # session = {totaal : [], 'check' : '', 'end_dilution' : [], 'dictionary' : {},             for perhaps use in database
 #            'HD' : '', 'delete' : [], 'points_dictionary' : {},
@@ -113,7 +115,7 @@ def file_data(request):
     if request.FILES.getlist('my_file') == []:
         return "file"
     for file in request.FILES.getlist('my_file'):
-        if str(file).split('.')[1] not in ['txt', 'xlsx']:
+        if str(file).split('.')[1] not in ['txt', 'xlsx', 'xls']:
             return 'extension'
     for file in request.FILES.getlist('my_file'):
         if str(file).split('.')[1] == 'txt':
@@ -122,6 +124,9 @@ def file_data(request):
             database(data_string, file)
         elif str(file).split('.')[1] == 'xlsx':
             data_string = formatting_xlsx(file)
+            database(data_string, file)
+        elif str(file).split('.')[1] == 'xls':
+            data_string = formatting_xls(file)
             database(data_string, file)
 
 
@@ -170,6 +175,43 @@ def formatting_xlsx(file_name):
         row_data = list()
         for cell in row:
             row_data.append(str(cell.value))
+        excel_data.append(row_data)
+    del excel_data[1][0]
+    del excel_data[0][1:]
+    excel_data[1].insert(0, '#')
+    for i in excel_data:
+        for j in i:
+            data_string += j + "="
+    return data_string
+
+
+def formatting_xls(data):
+    """
+    Input:
+        - data: Nested list with all the rows from a submitted .txt file.
+        - counter: A number that is used to differentiate files that need to be decoded.
+    Output:
+        - data_string: Formatted string with all values seperated by a special character.
+    Function:
+        - Reads in the data from a nested list and formats it in a way so it can be used in a single long string.
+          This string is then returned to the function file_data()
+    """
+    excel_data, data_string = list(), ""
+    df = pd.read_excel(data)
+    df['Raw Data{Wavelength:415.0}'] = df['Raw Data{Wavelength:415.0}'].fillna('#')
+    first = df.columns.values.tolist()
+    df_list = df.values.tolist()
+    df_list.insert(0, first)
+    for row in df_list:
+        row_data = list()
+        for cell in row:
+            if row[0] == "#":
+                try:
+                    row_data.append(str(int(cell)))
+                except:
+                    row_data.append(str(cell))
+            else:
+                row_data.append(str(cell))
         excel_data.append(row_data)
     del excel_data[1][0]
     del excel_data[0][1:]
