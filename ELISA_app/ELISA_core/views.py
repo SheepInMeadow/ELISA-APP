@@ -3,12 +3,16 @@ from .models import Plates
 import openpyxl
 import seaborn as sns
 import pandas as pd
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
 import statistics
 from operator import itemgetter
+
+#Make multithreading safe
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 # session = {totaal : [], 'check' : '', 'end_dilution' : [], 'dictionary' : {},             for perhaps use in database
 #            'HD' : '', 'delete' : [], 'points_dictionary' : {},
@@ -514,7 +518,8 @@ def create_graph(dictionary):
         ax = plt.gca()
         plt.xticks([1.0, 10, 100])
         ax.xaxis.set_major_formatter(ScalarFormatter())
-        plt.savefig('ELISA_core/static/images/' + str(key) + '.png')
+        plt.savefig("C:/Users/Mila/PycharmProjects/ELISA-APP/ELISA_app/ELISA_core/static/images/"+ str(key) + ".png")
+        #todo revert to {plt.savefig('ELISA_core/static/images/' + str(key) + '.png')} if merging into base main
         plt.close()
         counter += 1
 
@@ -591,7 +596,8 @@ def Cut_off(request):
                 df = pd.DataFrame(data=cut_dict)
                 ax = sns.swarmplot(data=df, y="New_OD")
                 ax = sns.boxplot(data=df, y="New_OD", color='white')
-                plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')
+                plt.savefig("C:/Users/Mila/PycharmProjects/ELISA-APP/ELISA_app/ELISA_core/static/images/" + "swarmplot2.png")
+                # todo revert to {plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')} if merging into base main
                 plt.close()
                 check_cut_off = 'true'
                 return render(request, 'Cut_off.html', {
@@ -628,7 +634,8 @@ def Cut_off(request):
             df = pd.DataFrame(data=cut_dict)
             ax = sns.swarmplot(data=df, y="OD")
             ax = sns.boxplot(data=df, y="OD", color='white')
-            plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')
+            plt.savefig("C:/Users/Mila/PycharmProjects/ELISA-APP/ELISA_app/ELISA_core/static/images/" + "swarmplot.png")
+            # todo revert to {plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')} if merging into base main
             plt.close()
             return render(request, 'Cut_off.html', {
                 'mean': mean,
