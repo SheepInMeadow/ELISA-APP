@@ -43,6 +43,7 @@ params_dictionary = {}
 final_dictionary = {}
 final_list = []
 cut_off_value_au = 0
+unit_name = ''
 
 
 def Home(request):
@@ -217,7 +218,7 @@ def Plate_layout(request):
           to bottom. If no button was pressed the template simply renders with only the file input field and submit
           button.
     """
-    global check, totaal
+    global check, totaal, unit_name
     if request.method == 'POST':
         if request.POST.get('file_submit'):
             totaal = []
@@ -235,6 +236,7 @@ def Plate_layout(request):
             })
         if request.POST.get('standaard_input'):
             Plate_layout_3(request)
+            unit_name = request.POST.get('unit')
             check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal, 'check': check, })
@@ -285,7 +287,6 @@ def Plate_layout_2(excel_data):
     length_empty = 0
     for i in excel_data:
         k = [e for e in i if e not in ('None')]
-        print(length_empty)
         if length_empty != 0 and len(k) != 0:
             for g in range(length_empty):
                 if k[0].isalpha():
@@ -317,20 +318,23 @@ def Plate_layout_3(request):
           zero. When clicking the submit button the page gets reloaded and the table gets filled, so there is no return.
     """
     values = request.POST.get('standaard')
+    divide_number = request.POST.get('divide')
     counter, counter2 = 0, 0
     for i in totaal:
         for j in i[2:]:
-            if counter2 != 7:
-                j[1] = float(values)
-                j[2] = float(values)
-                values = float(values) / 2
-            elif counter2 == 7:
-                j[1] = '#'
-                j[2] = '#'
+            for k in range(len(j)):
+                if j[k] == 'st':
+                    j[k] = round(float(values), 3)
+                    j[k+1] = round(float(values), 3)
+                    values = float(values) / float(divide_number)
+                elif counter2 == 7:
+                    j[1] = '#'
+                    j[2] = '#'
             counter2 += 1
+        counter2 = 0
         counter += 1
         values = request.POST.get('standaard')
-        counter2 = 0
+
 
 
 def Dilutions(request):
@@ -730,27 +734,27 @@ def Intermediate_result(request):
                 if type(value[1]) == str:
                     if len(value) == 2:
                         if float(value[1]) < bot:
-                            temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + [1])
+                            temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
                         else:
-                            temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + [3])
+                            temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
                     else:
                         value[2] = 1
                         temp0.append(value)
                 elif int(value[1]) <= float(string_bot):
                     if len(value) == 2:
-                        temp1.append(value + [1])
+                        temp1.append(value + ['below'])
                     else:
                         value[2] = 1
                         temp1.append(value)
                 elif int(value[1]) >= float(string_top):
                     if len(value) == 2:
-                        temp3.append(value + [3])
+                        temp3.append(value + ['above'])
                     else:
                         value[2] = 3
                         temp3.append(value)
                 else:
                     if len(value) == 2:
-                        temp2.append(value + [2])
+                        temp2.append(value + ['linear'])
                     else:
                         value[2] = 2
                         temp2.append(value)
@@ -767,6 +771,7 @@ def Intermediate_result(request):
                 upper = request.POST.get('upper')
         return render(request, 'Intermediate_result.html', {
             'complete_list': complete_list,
+            'unit': unit_name,
         })
     except:
         return render(request, 'Error.html', {
@@ -886,16 +891,17 @@ def End_results(request):
                         counter = 0
                         counter2 = 0
                         for elements in values:
-                            if counter < 5:
-                                if float(elements[1]) >= float(lower):
-                                    if elements[1] >= float(cut_off_value_au):
-                                        if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
-                                            final_dictionary[sampleID] = [elements[0], 1, round(elements[1])]
-                                if sampleID not in final_dictionary:
-                                    if float(elements[1]) < float(lower):
-                                        final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower)]
-                                    else:
-                                        final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1]))]
+                            if elements[0] != 'Empty':
+                                if counter < 5:
+                                    if float(elements[1]) >= float(lower):
+                                        if elements[1] >= float(cut_off_value_au):
+                                            if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
+                                                final_dictionary[sampleID] = [elements[0], 1, round(elements[1])]
+                                    if sampleID not in final_dictionary:
+                                        if float(elements[1]) < float(lower):
+                                            final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower)]
+                                        else:
+                                            final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1]))]
                                 sampleID += 1
                             counter += 1
                             counter2 += 1
@@ -908,6 +914,7 @@ def End_results(request):
             'final_list': final_list,
             'lower': lower,
             'cut_off_value': round(cut_off_value_au),
+            'unit': unit_name,
         })
     except:
         return render(request, 'Error.html', {

@@ -11,15 +11,15 @@
         <input class="spacing" type="submit" value="Save limits" name="limit_submit">
     </form>
     <p class="spacing">
-        1: Au/ml under linear part of calibration line<br>
-        2: Au/ml on linear part of calibration line<br>
-        3: Au/ml over linear part of calibration line<br>
+        below: {{unit}} under linear part of calibration line<br>
+        linear: {{unit}} on linear part of calibration line<br>
+        above: {{unit}} over linear part of calibration line<br>
     </p>
     <table class="spacing">
         <thead>
             <th>Sample ID</th>
-            <th>Arbitrary units</th>
-            <th>1,2,3</th>
+            <th>{{unit}}</th>
+            <th>below, linear, above</th>
         </thead>
         {% for values in complete_list %}
         <tr>
