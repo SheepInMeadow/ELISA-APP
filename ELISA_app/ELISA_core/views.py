@@ -10,6 +10,40 @@ from matplotlib.ticker import ScalarFormatter
 import statistics
 from operator import itemgetter
 
+# session = {totaal : [], 'check' : '', 'end_dilution' : [], 'dictionary' : {},             for perhaps use in database
+#            'HD' : '', 'delete' : [], 'points_dictionary' : {},
+#            'mean_ST_dictionary' : {}, 'mean' : 0, 'std' : 0, 'mean2' : 0,
+#            'std2' : 0, 'check_cut_off' : 'false', 'cut_data' : [],
+#            'outlier_value' : 0.0, 'cut_off_value' : 0.0, 'end_result' : {},
+#            'lower' : 0.0, 'upper' : 0.0, 'intermediate_dictionary' : {},
+#            'params_dictionary' : {}, 'final_dictionary' : {},
+#            'final_list' : [], 'cut_off_value_au' : 0}
+
+totaal = []
+check = ''
+end_dilution = []
+dictionary = {}
+HD = ''
+delete = []
+points_dictionary = {}
+mean_ST_dictionary = {}
+mean = 0
+std = 0
+mean2 = 0
+std2 = 0
+check_cut_off = 'false'
+cut_data = []
+outlier_value = 0.0
+cut_off_value = 0.0
+end_result = {}
+lower = 0.0
+upper = 0.0
+intermediate_dictionary = {}
+params_dictionary = {}
+final_dictionary = {}
+final_list = []
+cut_off_value_au = 0
+
 
 def Home(request):
     """
@@ -91,7 +125,6 @@ def file_data(request):
             database(data_string, file)
 
 
-
 def formatting_txt(data, counter):
     """
     Input:
@@ -164,10 +197,6 @@ def database(data_string, file):
         name=str(split[0]),
         data=data_string
     )
-
-
-totaal = []
-check = ''
 
 
 def Plate_layout(request):
@@ -294,9 +323,6 @@ def Plate_layout_3(request):
         counter2 = 0
 
 
-end_dilution = []
-
-
 def Dilutions(request):
     """
     Input:
@@ -357,11 +383,6 @@ def Dilutions_1(i, temp, row_names, dilution):
             else:
                 temp.append(dilution)
     return temp
-
-dictionary = {}
-HD = ''
-delete = []
-points_dictionary = {}
 
 
 def Visualize_data(request):
@@ -448,9 +469,6 @@ def Visualize_data(request):
         })
 
 
-mean_ST_dictionary = {}
-
-
 def create_graph(dictionary):
     """
     Input:
@@ -516,14 +534,6 @@ def formula(x, A, B, C, D, E):
     """
     return D + (A-D)/(np.power((1 + np.power((x/C), B)), E))
 
-mean = 0
-std = 0
-mean2 = 0
-std2 = 0
-check_cut_off = 'false'
-cut_data = []
-outlier_value = 0.0
-cut_off_value = 0.0
 
 def Cut_off(request):
     """
@@ -660,11 +670,6 @@ def formula2(y, A, B, C, D, E):
     return C*(np.power((np.power(((A-D)/(-D+float(y))), (1/E))-1), (1/B)))
 
 
-end_result = {}
-lower = 0.0
-upper = 0.0
-
-
 def Intermediate_result(request):
     """
     Input:
@@ -760,10 +765,6 @@ def Intermediate_result(request):
         })
 
 
-intermediate_dictionary = {}
-params_dictionary = {}
-
-
 def intermediate_list(key, params):
     """
     Input:
@@ -806,11 +807,6 @@ def intermediate_list(key, params):
                                 result = round(result, 3)
                             list1.append([totaal[position][values + 1][value], result])
             intermediate_dictionary[i] = list1
-
-
-final_dictionary = {}
-final_list = []
-cut_off_value_au = 0
 
 
 def End_results(request):
