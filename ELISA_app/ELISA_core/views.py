@@ -10,6 +10,7 @@ from matplotlib.ticker import ScalarFormatter
 import statistics
 from operator import itemgetter
 import xlrd
+import string
 
 
 #Make multithreading safe
@@ -127,6 +128,7 @@ def file_data(request):
             data_string = formatting_txt(data, 2)
             database(data_string, file)
         elif str(file).split('.')[1] == 'xlsx':
+            print("xlsx")
             data_string = formatting_xlsx(file)
             database(data_string, file)
         elif str(file).split('.')[1] == 'xls':
@@ -180,12 +182,39 @@ def formatting_xlsx(file_name):
         for cell in row:
             row_data.append(str(cell.value))
         excel_data.append(row_data)
-    del excel_data[1][0]
+    if excel_data[0][0] == "None":
+        data_string = spectra_data(excel_data, data_string)
+    else:
+        del excel_data[1][0]
+        del excel_data[0][1:]
+        excel_data[1].insert(0, '#')
+        for i in excel_data:
+            for j in i:
+                data_string += j + "="
+    return data_string
+
+
+def spectra_data(excel_data, data_string):
+    for row in range(len(excel_data)):
+        del excel_data[row][0]
+    title = excel_data[0][0] + " " + excel_data[1][0]
+    del excel_data[0][0]
+    excel_data[0].insert(0, title)
+    top_row = list(range(len(excel_data[0])-1))
+    plus_one = [x + 1 for x in top_row]
+    top = [str(x) for x in plus_one]
+    top.insert(0, "#")
+    excel_data.insert(1, top)
+    alphabet_list = list(string.ascii_uppercase)
+    for row in range(len(excel_data[2:])):
+        del excel_data[2:][row][0]
+        excel_data[2:][row].insert(0, alphabet_list[row])
     del excel_data[0][1:]
-    excel_data[1].insert(0, '#')
+    print(excel_data)
     for i in excel_data:
         for j in i:
             data_string += j + "="
+    print(data_string)
     return data_string
 
 
