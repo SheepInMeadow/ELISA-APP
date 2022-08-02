@@ -21,7 +21,9 @@ from operator import itemgetter
 
 totaal = []
 check = ''
-end_dilution = []
+check2 = ''
+dilution = []
+seprate_dilution = []
 dictionary = {}
 HD = ''
 delete = []
@@ -227,7 +229,7 @@ def Plate_layout(request):
                 return render(request, 'Plate_layout.html', {
                     'check': check, 'totaal': totaal,
                 })
-            excel_data = Plate_layout_1(request)
+            excel_data = Plate_layout_1(request, "P")
             totaal = Plate_layout_2(excel_data)
             check = 'go'
             return render(request, 'Plate_layout.html', {
@@ -245,7 +247,7 @@ def Plate_layout(request):
             'totaal': totaal, 'check': check, })
 
 
-def Plate_layout_1(request):
+def Plate_layout_1(request, check_type):
     """
     Input:
         - request: Catches submits from template.
@@ -255,14 +257,18 @@ def Plate_layout_1(request):
         - This function reads the submitted file and converts it to a nested list with all the data from that specific
           file. This nested list is then returned to the Plate_layout() function.
     """
-    excel_file = request.FILES["my_file"]
+    if check_type == 'P':
+        excel_file = request.FILES["my_file"]
+    elif check_type == 'D':
+        excel_file = request.FILES["dilution_file"]
+    elif check_type == 'D2':
+        excel_file = request.FILES["dilution_file2"]
     wb = openpyxl.load_workbook(excel_file)
     active_sheet = wb.active
     excel_data = list()
     for row in active_sheet.iter_rows():
         row_data = list()
         for cell in row:
-            print(cell.value)
             if type(cell.value) == float:
                 row_data.append(str(round(cell.value)))
             else:
@@ -319,22 +325,20 @@ def Plate_layout_3(request):
     """
     values = request.POST.get('standaard')
     divide_number = request.POST.get('divide')
-    counter, counter2 = 0, 0
+    list_st = []
+    list_divide = []
     for i in totaal:
-        for j in i[2:]:
-            for k in range(len(j)):
-                if j[k] == 'st':
-                    j[k] = round(float(values), 3)
-                    j[k+1] = round(float(values), 3)
-                    values = float(values) / float(divide_number)
-                elif counter2 == 7:
-                    j[1] = '#'
-                    j[2] = '#'
-            counter2 += 1
-        counter2 = 0
-        counter += 1
-        values = request.POST.get('standaard')
-
+        for j in range(len(i)):
+            list_divide.append(values)
+            list_st.append('st_' + str(j+1))
+            values = float(values) / float(divide_number)
+        for j in range(len(i)):
+            for k in range(len(i[j])):
+                for d in range(len(i)):
+                    if i[j][k] == list_st[d]:
+                        i[j][k] = round(float(list_divide[d]), 3)
+                    elif i[j][k] == 'Blank':
+                        i[j][k] = "#"
 
 
 def Dilutions(request):
@@ -349,26 +353,64 @@ def Dilutions(request):
           The function Dilutions_1 is called and given multiple variables. The returned list is added to the nested
           list and returned to the template.
     """
-    global end_dilution
+    global dilution, check2
+    show = 'no'
     if request.method == 'POST':
-        if request.POST.get('dilution_submit'):
-            dilution = request.POST.get('dilution')
-            row_names = ["A", "B", "C", "D", "E", "F", "G", "H"]
-            end_list = [["#", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-                         "10", "11", "12"]]
-            for i in range(8):
-                temp = []
-                temp = Dilutions_1(i, temp, row_names, dilution)
-                end_list.append(temp)
-            end_dilution = end_list
+        if request.POST.get('file_submit'):
+            dilution = []
+            if request.FILES.getlist("dilution_file") == []:
+                check2 = 'error'
+                return render(request, 'Dilutions.html', {
+                    'check': check2, 'dilution': dilution,
+                    'show' : show,
+                })
+            excel_data = Plate_layout_1(request, 'D')
+            dilution = Dilutions_1(excel_data)
+            check2 = 'go'
+            if len(dilution) != len(totaal) and len(dilution) != 1:
+                check2 = 'nope'
             return render(request, 'Dilutions.html', {
-                "end_list": end_list
+                'dilution': dilution,
+                'check': check2,
+                'show': show,
             })
-    return render(request, 'Dilutions.html', {
-        "end_list": end_dilution})
+        if request.POST.get('plate_belong1'):
+            show = 'yes'
+            dilution_1 = request.POST.get('dilution_1')
+            dil_list = list(dilution_1.split(", "))
+            seprate_dilution.append(dil_list)
+            return render(request, 'Dilutions.html', {
+                'dilution': dilution,
+                'check': check2,
+                'dilution_v1' : dilution_1,
+                'show': show, })
+        if request.POST.get('file_submit2'):
+            dilution = []
+            if request.FILES.getlist("dilution_file2") == []:
+                check2 = 'error'
+                return render(request, 'Dilutions.html', {
+                    'check': check2, 'dilution': dilution,
+                    'show' : show,
+                })
+            excel_data = Plate_layout_1(request, 'D2')
+            dilution = Dilutions_1(excel_data)
+            check2 = 'go'
+            dilution_2 = request.POST.get('dilution_2')
+            dil_list = list(dilution_2.split(", "))
+            seprate_dilution.append(dil_list)
+            print(seprate_dilution)
+            return render(request, 'Dilutions.html', {
+                'dilution': dilution,
+                'check': check2,
+                'show': show,
+            })
+    else:
+        return render(request, 'Dilutions.html', {
+            'dilution': dilution, 'check': check2,
+            'show' : show,})
 
 
-def Dilutions_1(i, temp, row_names, dilution):
+def Dilutions_1(excel_data):
     """
     Input:
         - i: An integer which ranges from one to eight.
@@ -381,22 +423,26 @@ def Dilutions_1(i, temp, row_names, dilution):
         - The function decides which value gets added to the temp list. A total of 13 strings are added to the temp
           list.
     """
-    for x in range(13):
-        if i == 0:
-            if x == 0:
-                temp.append(row_names[i])
-            elif x == 1 or x == 2:
-                temp.append("1")
-            else:
-                temp.append(dilution)
-        else:
-            if x == 0:
-                temp.append(row_names[i])
-            elif x == 1 or x == 2:
-                temp.append("1")
-            else:
-                temp.append(dilution)
-    return temp
+    temp, counter = [], 0
+    length_empty = 0
+    for i in excel_data:
+        k = [e for e in i if e not in ('None')]
+        if length_empty != 0 and len(k) != 0:
+            for g in range(length_empty):
+                if k[0].isalpha():
+                    if i[g] == 'None':
+                        k.insert(g, 'Empty')
+        if len(k) != 0:
+            if counter == 1:
+                k.insert(0, '#')
+                length_empty = len(k)
+            temp.append(k)
+            counter += 1
+            if counter == 10:
+                dilution.append(temp)
+                counter = 0
+                temp = []
+    return dilution
 
 
 def Visualize_data(request):
