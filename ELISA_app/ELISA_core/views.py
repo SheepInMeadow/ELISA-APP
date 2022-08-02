@@ -496,14 +496,16 @@ def Visualize_data(request):
             for j in new_lines[1:]:
                 if ',' in j:
                     new = float(j.replace(',', '.')) - mean
-                    c_color = max - new                           #hier
-                    color = c_color*85
+                    c_color = max - new
+                    times = 255/max
+                    color = c_color*times
                     DCO = round(new, 3)
                     temp.append([DCO, (color, 255, color)])
                 elif '.' in j:
                     new = float(j) - mean
-                    c_color = max - new                           #hier
-                    color = c_color*85
+                    c_color = max - new
+                    times = 255/max
+                    color = c_color*times
                     DCO = round(new, 3)
                     temp.append([DCO, (color, 255, color)])
                 else:
