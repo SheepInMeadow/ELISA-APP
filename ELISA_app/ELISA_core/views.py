@@ -11,12 +11,13 @@ import statistics
 from operator import itemgetter
 import pickle
 from django.core import serializers
+from django.conf import settings
 
-#Make multithreading safe
+# Make multithreading safe
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-autosave = True
+#autosave = True #could just call a writeout with every url call but, the only way to do that cleanly is with middleware and that's effort
 
 # session = {totaal : [], 'check' : '', 'end_dilution' : [], 'dictionary' : {},             for perhaps use in database
 #            'HD' : '', 'delete' : [], 'points_dictionary' : {},
@@ -923,7 +924,9 @@ def End_results(request):
 #            'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
 #        })
 
+
 def session_writeout(session_name): #Note: current pickle version = 4, supported from py 3.4 and default from py 3.8
+    session_name += ".ELISA_App"
     with open(session_name, 'wb') as f:
         pickle.dump((totaal, check, end_dilution, dictionary, HD, delete, points_dictionary, mean_ST_dictionary, mean,
                      std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
@@ -943,6 +946,8 @@ def session_readin(session):
         #[:-1] to exclude serialized plate db
         for data, var in zip(sessiontuple[:-1], varlist):
             globals()[var] = data
+            print(var)
+            print(data, end="\n\n")
         #start plate db readin
         Plates.objects.all().delete()
         for plate in serializers.deserialize("xml", sessiontuple[-1]):
