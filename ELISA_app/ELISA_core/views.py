@@ -481,17 +481,29 @@ def Visualize_data(request):
             number2 = lines[107].replace(',', '.')
             calculation = ((float(number1) + float(number2))/2)
             mean = round(calculation, 3)
-            for j in lines[1:]:
+            max = 0.0
+            new_lines = []
+            for k in lines[:14]:
+                new_lines.append(k)
+            for index, x in enumerate(lines[14:]):
+                if x.isdigit():
+                    x = str(float(x))
+                new_lines.append(x)
+            for x in new_lines[14:]:
+                if x[0].isdigit():
+                    if float(x) > max:
+                        max = float(x)
+            for j in new_lines[1:]:
                 if ',' in j:
                     new = float(j.replace(',', '.')) - mean
-                    c_color = 3 - new
-                    color = round(c_color)*85
+                    c_color = max - new                           #hier
+                    color = c_color*85
                     DCO = round(new, 3)
                     temp.append([DCO, (color, 255, color)])
                 elif '.' in j:
                     new = float(j) - mean
-                    c_color = 3 - new
-                    color = round(c_color)*85
+                    c_color = max - new                           #hier
+                    color = c_color*85
                     DCO = round(new, 3)
                     temp.append([DCO, (color, 255, color)])
                 else:
