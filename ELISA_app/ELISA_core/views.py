@@ -398,7 +398,6 @@ def Dilutions(request):
             dilution_2 = request.POST.get('dilution_2')
             dil_list = list(dilution_2.split(", "))
             seprate_dilution.append(dil_list)
-            print(seprate_dilution)
             return render(request, 'Dilutions.html', {
                 'dilution': dilution,
                 'check': check2,
@@ -471,62 +470,58 @@ def Visualize_data(request):
           generate tables, graphs, checkboxes and dropdowns. If any of the code raises and error it is caught with the
           except statement. This will then render an error on the page itself without any of the tables or graphs.
     """
-    try:
-        global dictionary
-        global HD
-        global delete
-        if request.method == 'POST':
-            HD = request.POST['HD']
-            bottom = request.POST.getlist('top')
-            top = request.POST.getlist('bottom')
-            counter = 0
-            for keys in dictionary:
-                points_dictionary[keys] = [top[counter], bottom[counter]]
-                counter += 1
-            delete = request.POST.getlist('delete')
-        data = Plates.objects.values()
+
+    global dictionary
+    global HD
+    global delete
+    if request.method == 'POST':
+        HD = request.POST['HD']
+        bottom = request.POST.getlist('top')
+        top = request.POST.getlist('bottom')
         counter = 0
+        for keys in dictionary:
+            points_dictionary[keys] = [top[counter], bottom[counter]]
+            counter += 1
+        delete = request.POST.getlist('delete')
+    data = Plates.objects.values()
+    counter = 0
+    nested = []
+    temp = []
+    for i in data:
+        name = i['id']
+        lines = i['data'].split('=')[:-1]
+        number1 = lines[106].replace(',', '.')
+        number2 = lines[107].replace(',', '.')
+        calculation = ((float(number1) + float(number2))/2)
+        mean = round(calculation, 3)
+        for j in lines[1:]:
+            if ',' in j:
+                new = float(j.replace(',', '.')) - mean
+                c_color = 3 - new
+                color = round(c_color)*85
+                DCO = round(new, 3)
+                temp.append([DCO, (color, 255, color)])
+            elif '.' in j:
+                new = float(j) - mean
+                c_color = 3 - new
+                color = round(c_color)*85
+                DCO = round(new, 3)
+                temp.append([DCO, (color, 255, color)])
+            else:
+                temp.append([j, (255, 255, 255)])
+            counter += 1
+            if counter == 13:
+                nested.append(temp)
+                counter = 0
+                temp = []
+        dictionary[name] = nested
         nested = []
-        temp = []
-        for i in data:
-            name = i['id']
-            lines = i['data'].split('=')[:-1]
-            number1 = lines[106].replace(',', '.')
-            number2 = lines[107].replace(',', '.')
-            calculation = ((float(number1) + float(number2))/2)
-            mean = round(calculation, 3)
-            for j in lines[1:]:
-                if ',' in j:
-                    new = float(j.replace(',', '.')) - mean
-                    c_color = 3 - new
-                    color = round(c_color)*85
-                    DCO = round(new, 3)
-                    temp.append([DCO, (color, 255, color)])
-                elif '.' in j:
-                    new = float(j) - mean
-                    c_color = 3 - new
-                    color = round(c_color)*85
-                    DCO = round(new, 3)
-                    temp.append([DCO, (color, 255, color)])
-                else:
-                    temp.append([j, (255, 255, 255)])
-                counter += 1
-                if counter == 13:
-                    nested.append(temp)
-                    counter = 0
-                    temp = []
-            dictionary[name] = nested
-            nested = []
-        if totaal != []:
-            create_graph(dictionary)
-        return render(request, 'Visualize_data.html', {
-            'dictionary': dictionary,
-        })
-    except:
-        return render(request, 'Error.html', {
-            'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the '
-                     'Plate Layout page.',
-        })
+    if totaal != []:
+        create_graph(dictionary)
+    return render(request, 'Visualize_data.html', {
+        'dictionary': dictionary,
+    })
+
 
 
 def create_graph(dictionary):
@@ -774,8 +769,8 @@ def Intermediate_result(request):
             mean_ST_dictionary[key].reverse()
             top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
             bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
-            string_top = formula2(top, *params_dictionary[key]) * int(end_dilution[3][3])
-            string_bot = formula2(bot, *params_dictionary[key]) * int(end_dilution[3][3])
+            string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
+            string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
             for value in values:
                 if type(value[1]) == str:
                     if len(value) == 2:
@@ -851,7 +846,6 @@ def intermediate_list(key, params):
         num2 = int(''.join(filter(str.isdigit, totaal[options][0][0])))
         if num1 == num2:
             position = options
-    dilution = end_dilution[3][3]
     list1 = []
     for i, j in dictionary.items():
         if i == key:
@@ -864,7 +858,15 @@ def intermediate_list(key, params):
                             if np.isnan(result):
                                 result = str(j[values][value][0])
                             else:
-                                result *= int(dilution)
+                                if len(seprate_dilution) == 0:
+                                    result *= int(dilution[0][values+1][value])
+                                    print(int(dilution[0][3][3]))
+
+                                else:
+                                    for d in seprate_dilution:
+                                        for g in range(d):
+                                            if key == seprate_dilution[d][g]:
+                                                result *= int(dilution[d][values][value])
                                 result = round(result, 3)
                             list1.append([totaal[position][values + 1][value], result])
             intermediate_dictionary[i] = list1
@@ -923,7 +925,7 @@ def End_results(request):
                     for keys, values in dictionary.items():
                         if keys == HD:
                             params = params_dictionary[HD]
-                            cut_off_value_au = formula2(float(cut_off_value), *params) * int(end_dilution[3][3])
+                            cut_off_value_au = formula2(float(cut_off_value), *params) * int(dilution[0][3][3])
                         if keys not in delete:
                             counter = 0
                             for OD_list in values[1:]:
