@@ -6,16 +6,35 @@
 {% block content %}
     <form method="POST">
         {% csrf_token %}
+        {% if check == 'go_low' %}
         <p class="spacing">Lower detection limit: <input type="number" name="lower" class="input_limit"></p>
+        <input class="spacing" type="submit" value="Save limits" name="limit_submit_l">
+        {% endif %}
+        {% if check == 'go_up' %}
         <p class="spacing">Upper detection limit: <input type="number" name="upper" class="input_limit"></p>
-        <input class="spacing" type="submit" value="Save limits" name="limit_submit">
+        <input class="spacing" type="submit" value="Save limits" name="limit_submit_u">
+        {% endif %}
     </form>
     <p class="spacing">
         below: {{unit}} under linear part of calibration line<br>
         linear: {{unit}} on linear part of calibration line<br>
         above: {{unit}} over linear part of calibration line<br>
     </p>
-    <table class="spacing">
+    <table style="float: left;" class="spacing">
+        <thead>
+            <th>Sample ID</th>
+            <th>{{unit}}</th>
+            <th>below, linear, above</th>
+        </thead>
+        {% for values in limit_list %}
+        <tr>
+            {% for element in values %}
+            <td>{{element}}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+    <table style="display: inline-block;" class="spacing">
         <thead>
             <th>Sample ID</th>
             <th>{{unit}}</th>

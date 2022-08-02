@@ -806,13 +806,32 @@ def Intermediate_result(request):
         lower = sorted_temp2[0][1]
         upper = sorted_temp2[-1][1]
         complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
+        if len(sorted_temp1) < 20:
+            low_list = sorted_temp1 + sorted_temp2[:20]
+        else:
+            pos = len(sorted_temp1) - 20
+            low_list = sorted_temp1[pos:] + sorted_temp2[:20]
+        if len(sorted_temp2) < 20:
+            low_list = sorted_temp2 + sorted_temp3[:20]
+        else:
+            pos = len(sorted_temp2) - 20
+            up_list = sorted_temp2[pos:] + sorted_temp3[:20]
         if request.method == 'POST':
-            if request.POST.get('limit_submit'):
+            if request.POST.get('limit_submit_l'):
                 lower = request.POST.get('lower')
+                return render(request, 'Intermediate_result.html', {
+                    'complete_list': complete_list,
+                    'unit': unit_name,
+                    'limit_list': up_list,
+                    'check': 'go_up'
+                })
+            if request.POST.get('limit_submit'):
                 upper = request.POST.get('upper')
         return render(request, 'Intermediate_result.html', {
             'complete_list': complete_list,
             'unit': unit_name,
+            'limit_list' : low_list,
+            'check' : 'go_low'
         })
     except:
         return render(request, 'Error.html', {
