@@ -9,7 +9,8 @@ import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
 import statistics
 from operator import itemgetter
-import pickle #dump session globals
+import pickle
+from django.core import serializers
 
 #Make multithreading safe
 matplotlib.use('Agg')
@@ -920,22 +921,33 @@ def End_results(request):
 #            'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
 #        })
 
-def session_writeout(): #unify outlist order and inlist, zip pickles and varname to prevent ref issues in mem
+def session_writeout(): #Note: current pickle version = 4, supported from py 3.4 and default from py 3.8
     with open("session", 'wb') as f:
         pickle.dump((totaal, check, end_dilution, dictionary, HD, delete, points_dictionary, mean_ST_dictionary, mean,
                      std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
-                     intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au), f)
+                     intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au), f) #Plates.objects is to save the db, not a global
         print("pickle succes")
+    # serialized as xml to prevent upgrading issues
+    with open("serializeddb.xml", 'w') as f:
+        f.write(serializers.serialize("xml", Plates.objects.all()))
+        print(Plates.objects.all())
+    Plates.objects.all().delete()
+    print(Plates.objects.all())
+
 
 def session_readin(session):
     varlist = (
     "totaal", "check", "end_dilution", "dictionary", "HD", "delete", "points_dictionary", "mean_ST_dictionary", "mean",
     "std", "mean2", "std2", "check_cut_off", "cut_data", "outlier_value", "cut_off_value", "end_result", "lower",
     "upper", "intermediate_dictionary", "params_dictionary", "final_dictionary", "final_list", "cut_off_value_au")
+
     with session as f:
         sessiontuple = pickle.load(f)
-        print(end="\n\n\n")
-        for i in sessiontuple:
-            print(i, end="\n\n")
-    #lowkey should not be doing this but it's a lot cleaner
-    print("glob", globals()['outlier_value'])
+        for data, var in zip(sessiontuple, varlist):
+            globals()[var] = data
+    #load in serialized as xml db
+
+    with open("serializeddb.xml", 'r') as f:
+        for plate in serializers.deserialize("xml", f):
+            plate.save()
+        print(Plates.objects.all())
