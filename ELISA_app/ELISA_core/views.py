@@ -16,6 +16,8 @@ from django.core import serializers
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+autosave = True
+
 # session = {totaal : [], 'check' : '', 'end_dilution' : [], 'dictionary' : {},             for perhaps use in database
 #            'HD' : '', 'delete' : [], 'points_dictionary' : {},
 #            'mean_ST_dictionary' : {}, 'mean' : 0, 'std' : 0, 'mean2' : 0,
@@ -62,7 +64,7 @@ def Home(request):
     """
     if request.method == 'POST':
         if request.POST.get('download_pickle'):
-            session_writeout()
+            session_writeout("Manual Session")
         elif request.POST.get('submit_pickle'):
             session_readin(request.FILES['my_pickle'])
     return render(request, 'Home.html')
@@ -921,18 +923,13 @@ def End_results(request):
 #            'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
 #        })
 
-def session_writeout(): #Note: current pickle version = 4, supported from py 3.4 and default from py 3.8
-    with open("session", 'wb') as f:
+def session_writeout(session_name): #Note: current pickle version = 4, supported from py 3.4 and default from py 3.8
+    with open(session_name, 'wb') as f:
         pickle.dump((totaal, check, end_dilution, dictionary, HD, delete, points_dictionary, mean_ST_dictionary, mean,
                      std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
-                     intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au), f) #Plates.objects is to save the db, not a global
+                     intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au,
+                     serializers.serialize("xml", Plates.objects.all())), f) #Plates.objects is serialized to xml, preventing upgrading issues with Django
         print("pickle succes")
-    # serialized as xml to prevent upgrading issues
-    with open("serializeddb.xml", 'w') as f:
-        f.write(serializers.serialize("xml", Plates.objects.all()))
-        print(Plates.objects.all())
-    Plates.objects.all().delete()
-    print(Plates.objects.all())
 
 
 def session_readin(session):
@@ -943,11 +940,10 @@ def session_readin(session):
 
     with session as f:
         sessiontuple = pickle.load(f)
-        for data, var in zip(sessiontuple, varlist):
+        #[:-1] to exclude serialized plate db
+        for data, var in zip(sessiontuple[:-1], varlist):
             globals()[var] = data
-    #load in serialized as xml db
-
-    with open("serializeddb.xml", 'r') as f:
-        for plate in serializers.deserialize("xml", f):
+        #start plate db readin
+        Plates.objects.all().delete()
+        for plate in serializers.deserialize("xml", sessiontuple[-1]):
             plate.save()
-        print(Plates.objects.all())
