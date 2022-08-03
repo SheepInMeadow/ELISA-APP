@@ -470,58 +470,62 @@ def Visualize_data(request):
           generate tables, graphs, checkboxes and dropdowns. If any of the code raises and error it is caught with the
           except statement. This will then render an error on the page itself without any of the tables or graphs.
     """
-
-    global dictionary
-    global HD
-    global delete
-    if request.method == 'POST':
-        HD = request.POST['HD']
-        bottom = request.POST.getlist('top')
-        top = request.POST.getlist('bottom')
+    try:
+        global dictionary
+        global HD
+        global delete
+        if request.method == 'POST':
+            HD = request.POST['HD']
+            bottom = request.POST.getlist('top')
+            top = request.POST.getlist('bottom')
+            counter = 0
+            for keys in dictionary:
+                points_dictionary[keys] = [top[counter], bottom[counter]]
+                counter += 1
+            delete = request.POST.getlist('delete')
+        data = Plates.objects.values()
         counter = 0
-        for keys in dictionary:
-            points_dictionary[keys] = [top[counter], bottom[counter]]
-            counter += 1
-        delete = request.POST.getlist('delete')
-    data = Plates.objects.values()
-    counter = 0
-    nested = []
-    temp = []
-    for i in data:
-        name = i['id']
-        lines = i['data'].split('=')[:-1]
-        number1 = lines[106].replace(',', '.')
-        number2 = lines[107].replace(',', '.')
-        calculation = ((float(number1) + float(number2))/2)
-        mean = round(calculation, 3)
-        for j in lines[1:]:
-            if ',' in j:
-                new = float(j.replace(',', '.')) - mean
-                c_color = 3 - new
-                color = round(c_color)*85
-                DCO = round(new, 3)
-                temp.append([DCO, (color, 255, color)])
-            elif '.' in j:
-                new = float(j) - mean
-                c_color = 3 - new
-                color = round(c_color)*85
-                DCO = round(new, 3)
-                temp.append([DCO, (color, 255, color)])
-            else:
-                temp.append([j, (255, 255, 255)])
-            counter += 1
-            if counter == 13:
-                nested.append(temp)
-                counter = 0
-                temp = []
-        dictionary[name] = nested
         nested = []
-    if totaal != []:
-        create_graph(dictionary)
-    return render(request, 'Visualize_data.html', {
-        'dictionary': dictionary,
-    })
-
+        temp = []
+        for i in data:
+            name = i['id']
+            lines = i['data'].split('=')[:-1]
+            number1 = lines[106].replace(',', '.')
+            number2 = lines[107].replace(',', '.')
+            calculation = ((float(number1) + float(number2))/2)
+            mean = round(calculation, 3)
+            for j in lines[1:]:
+                if ',' in j:
+                    new = float(j.replace(',', '.')) - mean
+                    c_color = 3 - new
+                    color = round(c_color)*85
+                    DCO = round(new, 3)
+                    temp.append([DCO, (color, 255, color)])
+                elif '.' in j:
+                    new = float(j) - mean
+                    c_color = 3 - new
+                    color = round(c_color)*85
+                    DCO = round(new, 3)
+                    temp.append([DCO, (color, 255, color)])
+                else:
+                    temp.append([j, (255, 255, 255)])
+                counter += 1
+                if counter == 13:
+                    nested.append(temp)
+                    counter = 0
+                    temp = []
+            dictionary[name] = nested
+            nested = []
+        if totaal != []:
+            create_graph(dictionary)
+        return render(request, 'Visualize_data.html', {
+            'dictionary': dictionary,
+        })
+    except:
+        return render(request, 'Error.html', {
+            'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the '
+                     'Plate Layout page.',
+        })
 
 
 def create_graph(dictionary):
