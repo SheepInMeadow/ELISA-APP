@@ -20,11 +20,12 @@
         linear: {{unit}} on linear part of calibration line<br>
         above: {{unit}} over linear part of calibration line<br>
     </p>
+     {% if check == 'go_low' %}
     <table style="float: left;" class="spacing">
         <thead>
             <th>Sample ID</th>
             <th>{{unit}}</th>
-            <th>below, linear, above</th>
+            <th>below, linear</th>
         </thead>
         {% for values in limit_list %}
         <tr>
@@ -34,6 +35,23 @@
         </tr>
         {% endfor %}
     </table>
+    {% endif %}
+    {% if check == 'go_up' %}
+    <table style="float: left;" class="spacing">
+        <thead>
+            <th>Sample ID</th>
+            <th>{{unit}}</th>
+            <th>linear, above</th>
+        </thead>
+        {% for values in limit_list %}
+        <tr>
+            {% for element in values %}
+            <td>{{element}}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
     <table style="display: inline-block;" class="spacing">
         <thead>
             <th>Sample ID</th>

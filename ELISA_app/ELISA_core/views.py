@@ -3,12 +3,19 @@ from .models import Plates
 import openpyxl
 import seaborn as sns
 import pandas as pd
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
 import statistics
 from operator import itemgetter
+import xlrd
+import string
+
+
+#Make multithreading safe
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 # session = {totaal : [], 'check' : '', 'end_dilution' : [], 'dictionary' : {},             for perhaps use in database
 #            'HD' : '', 'delete' : [], 'points_dictionary' : {},
@@ -116,7 +123,7 @@ def file_data(request):
     if request.FILES.getlist('my_file') == []:
         return "file"
     for file in request.FILES.getlist('my_file'):
-        if str(file).split('.')[1] not in ['txt', 'xlsx']:
+        if str(file).split('.')[1] not in ['txt', 'xlsx', 'xls']:
             return 'extension'
     for file in request.FILES.getlist('my_file'):
         if str(file).split('.')[1] == 'txt':
@@ -124,7 +131,11 @@ def file_data(request):
             data_string = formatting_txt(data, 2)
             database(data_string, file)
         elif str(file).split('.')[1] == 'xlsx':
+            print("xlsx")
             data_string = formatting_xlsx(file)
+            database(data_string, file)
+        elif str(file).split('.')[1] == 'xls':
+            data_string = formatting_xls(file)
             database(data_string, file)
 
 
@@ -173,6 +184,68 @@ def formatting_xlsx(file_name):
         row_data = list()
         for cell in row:
             row_data.append(str(cell.value))
+        excel_data.append(row_data)
+    if excel_data[0][0] == "None":
+        data_string = spectra_data(excel_data, data_string)
+    else:
+        del excel_data[1][0]
+        del excel_data[0][1:]
+        excel_data[1].insert(0, '#')
+        for i in excel_data:
+            for j in i:
+                data_string += j + "="
+    return data_string
+
+
+def spectra_data(excel_data, data_string):
+    for row in range(len(excel_data)):
+        del excel_data[row][0]
+    title = excel_data[0][0] + " " + excel_data[1][0]
+    del excel_data[0][0]
+    excel_data[0].insert(0, title)
+    top_row = list(range(len(excel_data[0])-1))
+    plus_one = [x + 1 for x in top_row]
+    top = [str(x) for x in plus_one]
+    top.insert(0, "#")
+    excel_data.insert(1, top)
+    alphabet_list = list(string.ascii_uppercase)
+    for row in range(len(excel_data[2:])):
+        del excel_data[2:][row][0]
+        excel_data[2:][row].insert(0, alphabet_list[row])
+    del excel_data[0][1:]
+    for i in excel_data:
+        for j in i:
+            data_string += j + "="
+    return data_string
+
+
+def formatting_xls(data):
+    """
+    Input:
+        - data: Nested list with all the rows from a submitted .txt file.
+        - counter: A number that is used to differentiate files that need to be decoded.
+    Output:
+        - data_string: Formatted string with all values seperated by a special character.
+    Function:
+        - Reads in the data from a nested list and formats it in a way so it can be used in a single long string.
+          This string is then returned to the function file_data()
+    """
+    excel_data, data_string = list(), ""
+    df = pd.read_excel(data)
+    df['Raw Data{Wavelength:415.0}'] = df['Raw Data{Wavelength:415.0}'].fillna('#')
+    first = df.columns.values.tolist()
+    df_list = df.values.tolist()
+    df_list.insert(0, first)
+    for row in df_list:
+        row_data = list()
+        for cell in row:
+            if row[0] == "#":
+                try:
+                    row_data.append(str(int(cell)))
+                except:
+                    row_data.append(str(cell))
+            else:
+                row_data.append(str(cell))
         excel_data.append(row_data)
     del excel_data[1][0]
     del excel_data[0][1:]
@@ -291,8 +364,15 @@ def Plate_layout_2(excel_data):
     """
     temp, counter = [], 0
     length_empty = 0
+    tot_rows = len(excel_data)
+    for x in range(len(excel_data)):
+        if 'late 2' in excel_data[x][0]:
+            rows = x - 1
+            break
+        else:
+            rows = tot_rows
     for i in excel_data:
-        k = [e for e in i if e not in ('None')]
+        k = [e for e in i if e != ('None')]
         if length_empty != 0 and len(k) != 0:
             for g in range(length_empty):
                 if k[0].isalpha():
@@ -304,12 +384,11 @@ def Plate_layout_2(excel_data):
                 length_empty = len(k)
             temp.append(k)
             counter += 1
-            if counter == 10:
+            if counter == rows:
                 totaal.append(temp)
                 counter = 0
                 temp = []
     return totaal
-
 
 
 def Plate_layout_3(request):
@@ -494,17 +573,31 @@ def Visualize_data(request):
             number2 = lines[107].replace(',', '.')
             calculation = ((float(number1) + float(number2))/2)
             mean = round(calculation, 3)
-            for j in lines[1:]:
+            max = 0.0
+            new_lines = []
+            for k in lines[:14]:
+                new_lines.append(k)
+            for index, x in enumerate(lines[14:]):
+                if x.isdigit():
+                    x = str(float(x))
+                new_lines.append(x)
+            for x in new_lines[14:]:
+                if x[0].isdigit():
+                    if float(x) > max:
+                        max = float(x)
+            for j in new_lines[1:]:
                 if ',' in j:
                     new = float(j.replace(',', '.')) - mean
-                    c_color = 3 - new
-                    color = round(c_color)*85
+                    c_color = max - new
+                    times = 255/max
+                    color = c_color*times
                     DCO = round(new, 3)
                     temp.append([DCO, (color, 255, color)])
                 elif '.' in j:
                     new = float(j) - mean
-                    c_color = 3 - new
-                    color = round(c_color)*85
+                    c_color = max - new
+                    times = 255/max
+                    color = c_color*times
                     DCO = round(new, 3)
                     temp.append([DCO, (color, 255, color)])
                 else:
