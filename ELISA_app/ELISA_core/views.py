@@ -210,11 +210,9 @@ def spectra_data(excel_data, data_string):
         del excel_data[2:][row][0]
         excel_data[2:][row].insert(0, alphabet_list[row])
     del excel_data[0][1:]
-    print(excel_data)
     for i in excel_data:
         for j in i:
             data_string += j + "="
-    print(data_string)
     return data_string
 
 
@@ -356,14 +354,21 @@ def Plate_layout_2(excel_data):
           returns this nested list to the Plate_layout() function.
     """
     temp, counter = [], 0
+    tot_rows = len(excel_data)
+    for x in range(len(excel_data)):
+        if 'late 2' in excel_data[x][0]:
+            rows = x-1
+            break
+        else:
+            rows = tot_rows
     for i in excel_data:
-        i = [e for e in i if e not in ('None')]
+        i = [e for e in i if e != ('None')]
         if len(i) != 0:
             if counter == 1:
                 i.insert(0, '#')
             temp.append(i)
             counter += 1
-            if counter == 10:
+            if counter == rows:
                 totaal.append(temp)
                 counter = 0
                 temp = []
