@@ -10,6 +10,7 @@ from matplotlib.ticker import ScalarFormatter
 import statistics
 from operator import itemgetter
 import xlrd
+import string
 
 
 #Make multithreading safe
@@ -127,6 +128,7 @@ def file_data(request):
             data_string = formatting_txt(data, 2)
             database(data_string, file)
         elif str(file).split('.')[1] == 'xlsx':
+            print("xlsx")
             data_string = formatting_xlsx(file)
             database(data_string, file)
         elif str(file).split('.')[1] == 'xls':
@@ -180,9 +182,34 @@ def formatting_xlsx(file_name):
         for cell in row:
             row_data.append(str(cell.value))
         excel_data.append(row_data)
-    del excel_data[1][0]
+    if excel_data[0][0] == "None":
+        data_string = spectra_data(excel_data, data_string)
+    else:
+        del excel_data[1][0]
+        del excel_data[0][1:]
+        excel_data[1].insert(0, '#')
+        for i in excel_data:
+            for j in i:
+                data_string += j + "="
+    return data_string
+
+
+def spectra_data(excel_data, data_string):
+    for row in range(len(excel_data)):
+        del excel_data[row][0]
+    title = excel_data[0][0] + " " + excel_data[1][0]
+    del excel_data[0][0]
+    excel_data[0].insert(0, title)
+    top_row = list(range(len(excel_data[0])-1))
+    plus_one = [x + 1 for x in top_row]
+    top = [str(x) for x in plus_one]
+    top.insert(0, "#")
+    excel_data.insert(1, top)
+    alphabet_list = list(string.ascii_uppercase)
+    for row in range(len(excel_data[2:])):
+        del excel_data[2:][row][0]
+        excel_data[2:][row].insert(0, alphabet_list[row])
     del excel_data[0][1:]
-    excel_data[1].insert(0, '#')
     for i in excel_data:
         for j in i:
             data_string += j + "="
@@ -327,14 +354,21 @@ def Plate_layout_2(excel_data):
           returns this nested list to the Plate_layout() function.
     """
     temp, counter = [], 0
+    tot_rows = len(excel_data)
+    for x in range(len(excel_data)):
+        if 'late 2' in excel_data[x][0]:
+            rows = x-1
+            break
+        else:
+            rows = tot_rows
     for i in excel_data:
-        i = [e for e in i if e not in ('None')]
+        i = [e for e in i if e != ('None')]
         if len(i) != 0:
             if counter == 1:
                 i.insert(0, '#')
             temp.append(i)
             counter += 1
-            if counter == 10:
+            if counter == rows:
                 totaal.append(temp)
                 counter = 0
                 temp = []
@@ -481,17 +515,31 @@ def Visualize_data(request):
             number2 = lines[107].replace(',', '.')
             calculation = ((float(number1) + float(number2))/2)
             mean = round(calculation, 3)
-            for j in lines[1:]:
+            max = 0.0
+            new_lines = []
+            for k in lines[:14]:
+                new_lines.append(k)
+            for index, x in enumerate(lines[14:]):
+                if x.isdigit():
+                    x = str(float(x))
+                new_lines.append(x)
+            for x in new_lines[14:]:
+                if x[0].isdigit():
+                    if float(x) > max:
+                        max = float(x)
+            for j in new_lines[1:]:
                 if ',' in j:
                     new = float(j.replace(',', '.')) - mean
-                    c_color = 3 - new
-                    color = round(c_color)*85
+                    c_color = max - new
+                    times = 255/max
+                    color = c_color*times
                     DCO = round(new, 3)
                     temp.append([DCO, (color, 255, color)])
                 elif '.' in j:
                     new = float(j) - mean
-                    c_color = 3 - new
-                    color = round(c_color)*85
+                    c_color = max - new
+                    times = 255/max
+                    color = c_color*times
                     DCO = round(new, 3)
                     temp.append([DCO, (color, 255, color)])
                 else:
