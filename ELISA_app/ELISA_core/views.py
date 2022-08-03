@@ -937,7 +937,8 @@ def End_results(request):
                         textfile.write(str(element) + "\t")
                     textfile.write("\n")
                 textfile.close()
-            if request.POST.get('update_table'):
+            if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
+                    request.POST.get('update_table_S'):
                 final_dictionary = {}
                 OD_multiplier = request.POST.get('OD_multiplier')
                 if len(end_result[HD][0]) == 2:
@@ -962,13 +963,22 @@ def End_results(request):
                                 if counter < 5:
                                     if float(elements[1]) >= float(lower):
                                         if elements[1] >= float(cut_off_value_au):
-                                            if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
-                                                final_dictionary[sampleID] = [elements[0], 1, round(elements[1])]
+                                            if request.POST.get('update_table_M'):
+                                                if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
+                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]), values[counter2][2], values[counter2 + 5][2]]
+                                            elif request.POST.get('update_table_H'):
+                                                OD_multiplier = request.POST.get('OD_higher')
+                                                if (values[counter2][2]) - (values[counter2 + 5][2]) >= int(OD_multiplier):
+                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]), values[counter2][2], values[counter2 + 5][2]]
+                                            elif request.POST.get('update_table_S'):
+                                                OD_multiplier = request.POST.get('reference')
+                                                if (round(elements[1])) >= int(OD_multiplier):
+                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]), values[counter2][2], values[counter2 + 5][2]]
                                     if sampleID not in final_dictionary:
                                         if float(elements[1]) < float(lower):
-                                            final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower)]
+                                            final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower), values[counter2][2], values[counter2 + 5][2]]
                                         else:
-                                            final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1]))]
+                                            final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1])), values[counter2][2], values[counter2 + 5][2]]
                                 sampleID += 1
                             counter += 1
                             counter2 += 1
