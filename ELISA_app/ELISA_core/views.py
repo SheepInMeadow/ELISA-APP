@@ -12,6 +12,8 @@ from operator import itemgetter
 import pickle
 from django.core import serializers
 from django.conf import settings
+from os.path import join
+from os import sep
 
 # Make multithreading safe
 matplotlib.use('Agg')
@@ -528,8 +530,9 @@ def create_graph(dictionary):
         ax = plt.gca()
         plt.xticks([1.0, 10, 100])
         ax.xaxis.set_major_formatter(ScalarFormatter())
-        plt.savefig("C:/Users/Mila/PycharmProjects/ELISA-APP/ELISA_app/ELISA_core/static/images/"+ str(key) + ".png")
-        #todo revert to {plt.savefig('ELISA_core/static/images/' + str(key) + '.png')} if merging into base main
+        plt.savefig(join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + str(key) + ".png"))
+        #todo should work on other machines, test before merging.
+        # Otherwise revert to {plt.savefig('ELISA_core/static/images/' + str(key) + '.png')} if merging into base main
         plt.close()
         counter += 1
 
@@ -606,8 +609,8 @@ def Cut_off(request):
                 df = pd.DataFrame(data=cut_dict)
                 ax = sns.swarmplot(data=df, y="New_OD")
                 ax = sns.boxplot(data=df, y="New_OD", color='white')
-                plt.savefig("C:/Users/Mila/PycharmProjects/ELISA-APP/ELISA_app/ELISA_core/static/images/" + "swarmplot2.png")
-                # todo revert to {plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')} if merging into base main
+                plt.savefig(join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + "swarmplot2.png"))
+                # todo same as other, {plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')} if merging into base main
                 plt.close()
                 check_cut_off = 'true'
                 return render(request, 'Cut_off.html', {
@@ -931,7 +934,7 @@ def session_writeout(session_name): #Note: current pickle version = 4, supported
         pickle.dump((totaal, check, end_dilution, dictionary, HD, delete, points_dictionary, mean_ST_dictionary, mean,
                      std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
                      intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au,
-                     serializers.serialize("xml", Plates.objects.all())), f) #Plates.objects is serialized to xml, preventing upgrading issues with Django
+                     serializers.serialize("xml", Plates.objects.all())), f, protocol=4) #Plates.objects is serialized to xml, preventing upgrading issues with Django
         print("pickle succes")
 
 
