@@ -1,3 +1,5 @@
+import os
+
 from django.shortcuts import render
 from .models import Plates
 import openpyxl
@@ -13,7 +15,7 @@ import pickle
 from django.core import serializers
 from django.conf import settings
 from os.path import join
-from os import sep
+from os import sep, listdir, remove
 
 # Make multithreading safe
 matplotlib.use('Agg')
@@ -30,30 +32,39 @@ import matplotlib.pyplot as plt
 #            'params_dictionary' : {}, 'final_dictionary' : {},
 #            'final_list' : [], 'cut_off_value_au' : 0}
 
-totaal = []
-check = ''
-end_dilution = []
-dictionary = {}
-HD = ''
-delete = []
-points_dictionary = {}
-mean_ST_dictionary = {}
-mean = 0
-std = 0
-mean2 = 0
-std2 = 0
-check_cut_off = 'false'
-cut_data = []
-outlier_value = 0.0
-cut_off_value = 0.0
-end_result = {}
-lower = 0.0
-upper = 0.0
-intermediate_dictionary = {}
-params_dictionary = {}
-final_dictionary = {}
-final_list = []
-cut_off_value_au = 0
+def reset_data():
+    #set globals
+    global totaal; totaal = []
+    global check; check = ''
+    global end_dilution; end_dilution = []
+    global dictionary; dictionary = {}
+    global HD; HD = ''
+    global delete; delete = []
+    global points_dictionary; points_dictionary = {}
+    global mean_ST_dictionary; mean_ST_dictionary = {}
+    global mean; mean = 0
+    global std; std = 0
+    global mean2; mean2 = 0
+    global std2; std2 = 0
+    global check_cut_off; check_cut_off = 'false'
+    global cut_data; cut_data = []
+    global outlier_value; outlier_value = 0.0
+    global cut_off_value; cut_off_value = 0.0
+    global end_result; end_result = {}
+    global lower; lower = 0.0
+    global upper; upper = 0.0
+    global intermediate_dictionary; intermediate_dictionary = {}
+    global params_dictionary; params_dictionary = {}
+    global final_dictionary; final_dictionary = {}
+    global final_list; final_list = []
+    global cut_off_value_au; cut_off_value_au = 0
+    #empty plates from db
+    Plates.objects.all().delete()
+    #empty pngs from images
+    for file in listdir(join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep)):
+        if file.endswith('.png'):
+            os.remove(join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + file))
+    return
 
 
 def Home(request):
@@ -91,7 +102,7 @@ def Input_data(request):
         if request.method == 'POST':
             error = 'correct'
             if request.POST.get('Empty database'):
-                Plates.objects.all().delete()
+                reset_data()
                 return render(request, 'Input_data.html', {
                     'check': 'correct_emptied',
                 })
@@ -866,7 +877,7 @@ def End_results(request):
     global final_dictionary
     if request.method == 'POST':
         if request.POST.get('Empty database'):
-            Plates.objects.all().delete()
+            reset_data()
         if request.POST.get('download'):
             session_writeout()
             """

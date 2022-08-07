@@ -17,6 +17,9 @@ from django.contrib import admin
 from django.urls import path
 from .views import *
 
+#Load globals on app startup
+reset_data()
+
 urlpatterns = [
     path('', Home),
     path('Input_data', Input_data),
