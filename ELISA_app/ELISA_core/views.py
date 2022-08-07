@@ -32,6 +32,10 @@ import matplotlib.pyplot as plt
 #            'params_dictionary' : {}, 'final_dictionary' : {},
 #            'final_list' : [], 'cut_off_value_au' : 0}
 
+def get_mediapath(extension=''):
+    mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
+    return mediapath
+
 def reset_data():
     #set globals
     global totaal; totaal = []
@@ -61,9 +65,9 @@ def reset_data():
     #empty plates from db
     Plates.objects.all().delete()
     #empty pngs from images
-    for file in listdir(join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep)):
+    for file in listdir(get_mediapath()):
         if file.endswith('.png'):
-            os.remove(join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + file))
+            os.remove(get_mediapath(file))
     return
 
 
@@ -541,9 +545,7 @@ def create_graph(dictionary):
         ax = plt.gca()
         plt.xticks([1.0, 10, 100])
         ax.xaxis.set_major_formatter(ScalarFormatter())
-        plt.savefig(join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + str(key) + ".png"))
-        #todo should work on other machines, test before merging.
-        # Otherwise revert to {plt.savefig('ELISA_core/static/images/' + str(key) + '.png')} if merging into base main
+        plt.savefig(get_mediapath(str(key) + ".png"))
         plt.close()
         counter += 1
 
@@ -620,8 +622,7 @@ def Cut_off(request):
                 df = pd.DataFrame(data=cut_dict)
                 ax = sns.swarmplot(data=df, y="New_OD")
                 ax = sns.boxplot(data=df, y="New_OD", color='white')
-                plt.savefig(join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + "swarmplot2.png"))
-                # todo same as other, {plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')} if merging into base main
+                plt.savefig(get_mediapath('swarmplot2.png'))
                 plt.close()
                 check_cut_off = 'true'
                 return render(request, 'Cut_off.html', {
@@ -658,8 +659,7 @@ def Cut_off(request):
             df = pd.DataFrame(data=cut_dict)
             ax = sns.swarmplot(data=df, y="OD")
             ax = sns.boxplot(data=df, y="OD", color='white')
-            plt.savefig("C:/Users/Mila/PycharmProjects/ELISA-APP/ELISA_app/ELISA_core/static/images/" + "swarmplot.png")
-            # todo revert to {plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')} if merging into base main
+            plt.savefig(get_mediapath('swarmplot.png'))
             plt.close()
             return render(request, 'Cut_off.html', {
                 'mean': mean,
