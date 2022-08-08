@@ -128,7 +128,6 @@ def file_data(request):
             data_string = formatting_txt(data, 2)
             database(data_string, file)
         elif str(file).split('.')[1] == 'xlsx':
-            print("xlsx")
             data_string = formatting_xlsx(file)
             database(data_string, file)
         elif str(file).split('.')[1] == 'xls':
@@ -170,9 +169,9 @@ def formatting_xlsx(file_name):
     Output:
         - data_string: A formatted string with all values seperated by a special character.
     Function:
-        - Opens an excel workbook and reads in all the cells from a specific worksheet. By formatting all the rows
-          to the same length it can then be used to generate the data_string that is then returned to the file_data()
-          function.
+        - Opens an excel workbook and reads in all the cells from a specific worksheet.
+          It checks if the data is from a spectramax file and if so, sends it to the spectra_data function.
+          If not, the data is processed into the data_string and returned to the file_data() function
     """
     wb = openpyxl.load_workbook(file_name)
     active_sheet = wb.active
@@ -195,6 +194,16 @@ def formatting_xlsx(file_name):
 
 
 def spectra_data(excel_data, data_string):
+    """
+        Input:
+            - excel_data: Nested list with all the rows from a submitted excel file.
+            - data_string: An empty string.
+        Output:
+            - data_string: Formatted string with all values seperated by a special character.
+        Function:
+            - Reads in the data from a nested list and adds an indentifier column and row.
+              The data is converted to data_string and returned to the function file_data().
+        """
     for row in range(len(excel_data)):
         del excel_data[row][0]
     title = excel_data[0][0] + " " + excel_data[1][0]
@@ -216,19 +225,20 @@ def spectra_data(excel_data, data_string):
     return data_string
 
 
-def formatting_xls(data):
+def formatting_xls(file_name):
     """
     Input:
-        - data: Nested list with all the rows from a submitted .txt file.
-        - counter: A number that is used to differentiate files that need to be decoded.
+        - file_name: A string that contains the name of a specific file.
     Output:
         - data_string: Formatted string with all values seperated by a special character.
     Function:
-        - Reads in the data from a nested list and formats it in a way so it can be used in a single long string.
-          This string is then returned to the function file_data()
+        - Creates a dataframe an excel workbook and reads in all the cells from a specific worksheet.
+          It create a nested list from this data and processes thid data into the data_string.
+          It checks if the data is from a spectramax file and if so, sends it to the spectra_data function.
+          If not, the data is processed into the data_string and returned to the file_data() function.
     """
     excel_data, data_string = list(), ""
-    df = pd.read_excel(data)
+    df = pd.read_excel(file_name)
     df['Raw Data{Wavelength:415.0}'] = df['Raw Data{Wavelength:415.0}'].fillna('#')
     first = df.columns.values.tolist()
     df_list = df.values.tolist()
@@ -349,8 +359,9 @@ def Plate_layout_2(excel_data):
         - totaal: A nested list with the data from a plate layout file that is properly formatted and stripped of
           None's.
     Function:
-        - This function reads every line in the nested list excel_data and deletes all the None's then inserts values
-          so the lists have the same length. Finally it appends the formatted lists to the nested totaal list and
+        - This function reads every line in the nested list excel_data, determines the max rows per plate
+          and deletes all the None's then inserts values so the lists have the same length.
+          Finally it appends the formatted lists to the nested totaal list and
           returns this nested list to the Plate_layout() function.
     """
     temp, counter = [], 0
