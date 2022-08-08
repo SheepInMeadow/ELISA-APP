@@ -112,7 +112,7 @@ def file_data(request):
         - 'file': A string that is used on the Input_data.html to show a specific error message.
         - 'extension': A string that is used on the Input_data.html to show a specific error message.
     Function:
-        - If there are no files selected but the user did click the submit button a string will be returned to
+        - If there are no files selected, but the user did click the submit button, a string will be returned to
           catch this error. If the user did submit files they are then checked on proper formatting, if not a string
           will be returned to catch this error. If these two checks are passed the files are then passed on to a
           corresponding function that handles the specific extension.
@@ -356,11 +356,12 @@ def Plate_layout_2(excel_data):
     temp, counter = [], 0
     tot_rows = len(excel_data)
     for x in range(len(excel_data)):
-        if 'late 2' in excel_data[x][0]:
-            rows = x-1
-            break
-        else:
-            rows = tot_rows
+        if x != 0:
+            if 'late ' in excel_data[x][0]:
+                rows = x-1
+                break
+            else:
+                rows = tot_rows
     for i in excel_data:
         i = [e for e in i if e != ('None')]
         if len(i) != 0:
