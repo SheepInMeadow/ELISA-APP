@@ -6,21 +6,48 @@
 {% block content %}
     {% load static %}
     <link rel="stylesheet" type="text/css"
-          href="{% static 'css/Dilutions.css' %}">
-    <form method="post">
-        {% csrf_token %}
-        <div class="dil_text">
-            Give the dilution: <input type="number" name="dilution" class="dil">
-            <input type="submit" name="dilution_submit" class="dil_submit" value="Create table"><br><br>
-        </div>
-        <table class="dil_table">
-            {% for x in end_list %}
-                <tr class="dil_tr">
-                {% for i in x %}
-                    <td class="dil_td">{{i}}</td>
-                {% endfor %}
-                </tr>
+          href="{% static 'css/Plate_layout.css' %}">
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="plate_top">
+        <input type="file" name="dilution_file" class="plate_file"/>
+        <input type="submit" name="file_submit" value="Upload data" class="plate_button"/><br><br>
+        {% if check == 'error' %}
+            <p class="message_fail">No file was selected, please try again.</p>
+        {% endif %}
+    </div>
+{% if check == 'nope' %}
+    <p class="message_fail">The dilution file doesn't have the right amount of plates, try again</p>
+{% endif %}
+{% if check == 'go' %}
+    <div class="plate_st_text">
+        If this dilution isn't for the entire experiment, type which plates this dilution is for. (P.S type
+        the names like this name_plate, name_plate, name_plate, etc)<br><br>
+        <input type="text" name="dilution_1" class="plate_st_input"> <input type="submit" name="plate_belong1" value="Upload data" class="plate_button"/>
+        <br><br>
+        {% if show == 'yes' %}
+        The plates for first dilution: {{dilution_v1}} <br><br>
+        Upload your second dilution file:
+        <input type="file" name="dilution_file2" class="plate_file"/>
+        <input type="submit" name="file_submit2" value="Upload data" class="plate_button"/><br><br>
+        Type here for which plates the second dilution file belongs to.<br><br>
+        <input required type="text" name="dilution_2" class="plate_st_input">
+        {% if check == 'error' %}
+            <p class="message_fail">No file was selected, please try again.</p>
+        {% endif %}
+        {% endif %}
+    </div>
+</form>
+{% for i in dilution %}
+    <table>
+        {% for j in i %}
+        <tr>
+            {% for k in j %}
+            <td>{{k}}</td>
             {% endfor %}
-        </table>
-    </form>
+        </tr>
+        {% endfor %}
+    </table>
+{% endfor %}
+{% endif %}
 {% endblock %}
