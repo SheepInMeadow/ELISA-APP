@@ -131,7 +131,6 @@ def file_data(request):
             data_string = formatting_txt(data, 2)
             database(data_string, file)
         elif str(file).split('.')[1] == 'xlsx':
-            print("xlsx")
             data_string = formatting_xlsx(file)
             database(data_string, file)
         elif str(file).split('.')[1] == 'xls':
@@ -432,17 +431,18 @@ def Dilutions(request):
           The function Dilutions_1 is called and given multiple variables. The returned list is added to the nested
           list and returned to the template.
     """
-    global dilution, check2
+    global dilution, check2, seprate_dilution
     show = 'no'
     if request.method == 'POST':
         if request.POST.get('file_submit'):
-            dilution = []
             if request.FILES.getlist("dilution_file") == []:
                 check2 = 'error'
                 return render(request, 'Dilutions.html', {
                     'check': check2, 'dilution': dilution,
                     'show' : show,
                 })
+            dilution = []
+            seprate_dilution = []
             excel_data = Plate_layout_1(request, 'D')
             dilution = Dilutions_1(excel_data)
             check2 = 'go'
@@ -464,7 +464,6 @@ def Dilutions(request):
                 'dilution_v1' : dilution_1,
                 'show': show, })
         if request.POST.get('file_submit2'):
-            dilution = []
             if request.FILES.getlist("dilution_file2") == []:
                 check2 = 'error'
                 return render(request, 'Dilutions.html', {
@@ -489,6 +488,7 @@ def Dilutions(request):
 
 
 def Dilutions_1(excel_data):
+    global dilution
     """
     Input:
         - i: An integer which ranges from one to eight.
@@ -503,8 +503,16 @@ def Dilutions_1(excel_data):
     """
     temp, counter = [], 0
     length_empty = 0
+    tot_rows = len(excel_data)
+    for x in range(len(excel_data)):
+        if x != 0:
+            if 'late ' in excel_data[x][0]:
+                rows = x - 1
+                break
+            else:
+                rows = tot_rows
     for i in excel_data:
-        k = [e for e in i if e not in ('None')]
+        k = [e for e in i if e != ('None')]
         if length_empty != 0 and len(k) != 0:
             for g in range(length_empty):
                 if k[0].isalpha():
@@ -516,7 +524,7 @@ def Dilutions_1(excel_data):
                 length_empty = len(k)
             temp.append(k)
             counter += 1
-            if counter == 10:
+            if counter == rows:
                 dilution.append(temp)
                 counter = 0
                 temp = []
@@ -866,8 +874,20 @@ def Intermediate_result(request):
             mean_ST_dictionary[key].reverse()
             top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
             bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
-            string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
-            string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
+            if len(seprate_dilution) != 0:
+                for sep in seprate_dilution[0]:
+                    if sep in key:
+                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
+                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
+                for sep in seprate_dilution[1]:
+                    if sep in key:
+                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
+                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
+            else:
+                for d in range(len(dilution)):
+                    if dilution[d][0][0] in key:
+                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
+                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
             for value in values:
                 if type(value[1]) == str:
                     if len(value) == 2:
@@ -909,7 +929,7 @@ def Intermediate_result(request):
             pos = len(sorted_temp1) - 20
             low_list = sorted_temp1[pos:] + sorted_temp2[:20]
         if len(sorted_temp2) < 20:
-            low_list = sorted_temp2 + sorted_temp3[:20]
+            up_list = sorted_temp2 + sorted_temp3[:20]
         else:
             pos = len(sorted_temp2) - 20
             up_list = sorted_temp2[pos:] + sorted_temp3[:20]
@@ -935,7 +955,6 @@ def Intermediate_result(request):
             'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
                      'your preferences on the visualize Data page.'
         })
-
 
 def intermediate_list(key, params):
     """
@@ -975,14 +994,18 @@ def intermediate_list(key, params):
                                 result = str(j[values][value][0])
                             else:
                                 if len(seprate_dilution) == 0:
-                                    result *= int(dilution[0][values+1][value])
-                                    print(int(dilution[0][3][3]))
-
+                                    if len(dilution) == 1:
+                                        result *= int(dilution[0][values + 1][value])
+                                    else:
+                                        for dil in range(len(dilution)):
+                                            if dilution[dil][0][0] in key:
+                                                result *= int(dilution[dil][values+1][value])
                                 else:
-                                    for d in seprate_dilution:
-                                        for g in range(d):
-                                            if key == seprate_dilution[d][g]:
-                                                result *= int(dilution[d][values][value])
+                                    for d in range(len(seprate_dilution)):
+                                        for g in seprate_dilution[d]:
+                                            if g in key:
+                                                result *= int(dilution[d][values+1][value])
+
                                 result = round(result, 3)
                             list1.append([totaal[position][values + 1][value], result])
             intermediate_dictionary[i] = list1

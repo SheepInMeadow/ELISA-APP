@@ -31,7 +31,7 @@
         <input type="file" name="dilution_file2" class="plate_file"/>
         <input type="submit" name="file_submit2" value="Upload data" class="plate_button"/><br><br>
         Type here for which plates the second dilution file belongs to.<br><br>
-        <input type="text" name="dilution_2" class="plate_st_input">
+        <input required type="text" name="dilution_2" class="plate_st_input">
         {% if check == 'error' %}
             <p class="message_fail">No file was selected, please try again.</p>
         {% endif %}

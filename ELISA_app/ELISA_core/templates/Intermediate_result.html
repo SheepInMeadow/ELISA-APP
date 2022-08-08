@@ -7,11 +7,11 @@
     <form method="POST">
         {% csrf_token %}
         {% if check == 'go_low' %}
-        <p class="spacing">Lower detection limit: <input type="number" name="lower" class="input_limit"></p>
+        <p class="spacing">Lower detection limit: <input required type="number" name="lower" class="input_limit"></p>
         <input class="spacing" type="submit" value="Save limits" name="limit_submit_l">
         {% endif %}
         {% if check == 'go_up' %}
-        <p class="spacing">Upper detection limit: <input type="number" name="upper" class="input_limit"></p>
+        <p class="spacing">Upper detection limit: <input required type="number" name="upper" class="input_limit"></p>
         <input class="spacing" type="submit" value="Save limits" name="limit_submit_u">
         {% endif %}
     </form>
