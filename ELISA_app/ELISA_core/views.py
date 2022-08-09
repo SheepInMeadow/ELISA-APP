@@ -893,6 +893,9 @@ def Intermediate_result(request):
                     if sep in key:
                         string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
                         string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
+            elif len(dilution) == 1:
+                string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
+                string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
             else:
                 for d in range(len(dilution)):
                     if dilution[d][0][0] in key:
@@ -1086,7 +1089,6 @@ def End_results(request):
                                     end_result[keys][counter].append(OD[0])
                                     end_result[keys][counter].append(well)
                                     end_result[keys][counter].append(plate_number)
-                                    end_result[keys][counter].append("hoi casper")
                                     counter += 1
                                     plate_number += 1
                 sampleID = 1
