@@ -55,3 +55,21 @@ td {
     width: 5%;
     border: 1px solid grey;
 }
+
+.ELISA_type {
+    float: left;
+    font-size: 21px;
+    font-family: "Arial", serif;
+}
+
+.cut-off {
+    margin-left: 50%;
+    font-size: 21px;
+    font-family: "Arial", serif;
+}
+.input {
+    width: 100%;
+    background-color: red;
+    font-size: 21px;
+    font-family: "Arial", serif;
+}

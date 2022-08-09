@@ -55,6 +55,12 @@ final_list = []
 cut_off_value_au = 0
 unit_name = ''
 
+#new globals
+row_standard = ''
+column_standard = ''
+elisa_type = ''
+cut_off_type = ''
+
 
 def Home(request):
     """
@@ -116,7 +122,7 @@ def file_data(request):
         - 'file': A string that is used on the Input_data.html to show a specific error message.
         - 'extension': A string that is used on the Input_data.html to show a specific error message.
     Function:
-        - If there are no files selected but the user did click the submit button a string will be returned to
+        - If there are no files selected, but the user did click the submit button, a string will be returned to
           catch this error. If the user did submit files they are then checked on proper formatting, if not a string
           will be returned to catch this error. If these two checks are passed the files are then passed on to a
           corresponding function that handles the specific extension.
@@ -173,9 +179,9 @@ def formatting_xlsx(file_name):
     Output:
         - data_string: A formatted string with all values seperated by a special character.
     Function:
-        - Opens an excel workbook and reads in all the cells from a specific worksheet. By formatting all the rows
-          to the same length it can then be used to generate the data_string that is then returned to the file_data()
-          function.
+        - Opens an excel workbook and reads in all the cells from a specific worksheet.
+          It checks if the data is from a spectramax file and if so, sends it to the spectra_data function.
+          If not, the data is processed into the data_string and returned to the file_data() function
     """
     wb = openpyxl.load_workbook(file_name)
     active_sheet = wb.active
@@ -198,6 +204,16 @@ def formatting_xlsx(file_name):
 
 
 def spectra_data(excel_data, data_string):
+    """
+        Input:
+            - excel_data: Nested list with all the rows from a submitted excel file.
+            - data_string: An empty string.
+        Output:
+            - data_string: Formatted string with all values seperated by a special character.
+        Function:
+            - Reads in the data from a nested list and adds an indentifier column and row.
+              The data is converted to data_string and returned to the function file_data().
+        """
     for row in range(len(excel_data)):
         del excel_data[row][0]
     title = excel_data[0][0] + " " + excel_data[1][0]
@@ -219,19 +235,20 @@ def spectra_data(excel_data, data_string):
     return data_string
 
 
-def formatting_xls(data):
+def formatting_xls(file_name):
     """
     Input:
-        - data: Nested list with all the rows from a submitted .txt file.
-        - counter: A number that is used to differentiate files that need to be decoded.
+        - file_name: A string that contains the name of a specific file.
     Output:
         - data_string: Formatted string with all values seperated by a special character.
     Function:
-        - Reads in the data from a nested list and formats it in a way so it can be used in a single long string.
-          This string is then returned to the function file_data()
+        - Creates a dataframe an excel workbook and reads in all the cells from a specific worksheet.
+          It create a nested list from this data and processes thid data into the data_string.
+          It checks if the data is from a spectramax file and if so, sends it to the spectra_data function.
+          If not, the data is processed into the data_string and returned to the file_data() function.
     """
     excel_data, data_string = list(), ""
-    df = pd.read_excel(data)
+    df = pd.read_excel(file_name)
     df['Raw Data{Wavelength:415.0}'] = df['Raw Data{Wavelength:415.0}'].fillna('#')
     first = df.columns.values.tolist()
     df_list = df.values.tolist()
@@ -293,8 +310,13 @@ def Plate_layout(request):
           to bottom. If no button was pressed the template simply renders with only the file input field and submit
           button.
     """
-    global check, totaal, unit_name
+    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name
     if request.method == 'POST':
+        elisa_type = request.POST.get('elisa_type')
+        cut_off_type = request.POST.get('cut-off_type')
+        if elisa_type == "1":
+            row_standard = request.POST.get('row_input')
+            column_standard = request.POST.get('column_input')
         if request.POST.get('file_submit'):
             totaal = []
             if request.FILES.getlist("my_file") == []:
@@ -358,19 +380,21 @@ def Plate_layout_2(excel_data):
         - totaal: A nested list with the data from a plate layout file that is properly formatted and stripped of
           None's.
     Function:
-        - This function reads every line in the nested list excel_data and deletes all the None's then inserts values
-          so the lists have the same length. Finally it appends the formatted lists to the nested totaal list and
+        - This function reads every line in the nested list excel_data, determines the max rows per plate
+          and deletes all the None's then inserts values so the lists have the same length.
+          Finally it appends the formatted lists to the nested totaal list and
           returns this nested list to the Plate_layout() function.
     """
     temp, counter = [], 0
     length_empty = 0
     tot_rows = len(excel_data)
     for x in range(len(excel_data)):
-        if 'late 2' in excel_data[x][0]:
-            rows = x - 1
-            break
-        else:
-            rows = tot_rows
+        if x != 0:
+            if 'late ' in excel_data[x][0]:
+                rows = x-1
+                break
+            else:
+                rows = tot_rows
     for i in excel_data:
         k = [e for e in i if e != ('None')]
         if length_empty != 0 and len(k) != 0:
