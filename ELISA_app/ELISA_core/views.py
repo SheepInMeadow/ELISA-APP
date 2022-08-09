@@ -11,6 +11,7 @@ import statistics
 from operator import itemgetter
 import xlrd
 import string
+from copy import deepcopy
 
 
 #Make multithreading safe
@@ -423,13 +424,16 @@ def Dilutions(request):
     """
     Input:
         - request: Catches submit from template.
-        - end_dilution: An empty list
+        - seprate_dilution: An empty list
     Output:
-        - end_dilution: A nested list with the dilution of the plate. The values are all numbers with as type string.
+        - dilution: A nested list with the dilution of the plate. The values are all numbers with as type string.
+        - seprate_dilution: A nested list with the names of plates
     Function:
-        - the function checks if the dilution is submitted and creates header lists for the nested list end_dilution.
-          The function Dilutions_1 is called and given multiple variables. The returned list is added to the nested
-          list and returned to the template.
+        - The function checks if a file is submitted, if so then it gives it to other functions in order to read it.
+          Then it changes a function to 'go' to allow it to be shown on the website. Then it checks of dilution onl has 1
+          plate or more and if its more is it the same size as plate layout.
+          the function also checks if the user submitted the options so combine plate names with one dilution file. then
+          it checks if the user submitted another file inorder to add it to the dilution variable.
     """
     global dilution, check2, seprate_dilution
     show = 'no'
@@ -491,15 +495,15 @@ def Dilutions_1(excel_data):
     global dilution
     """
     Input:
-        - i: An integer which ranges from one to eight.
-        - temp: An empty list
-        - row_names: A list with the first letter each row needs.
-        - dilution: The dilution value.
+        - excel_data: A nested list with the data from a plate layout file.
     Output:
-        - temp: A list with the dilution values of a row. The values are all numbers with as type string.
+        - dilution: A nested list with the data from a dilution file that is properly formatted and stripped of
+          None's.
     Function:
-        - The function decides which value gets added to the temp list. A total of 13 strings are added to the temp
-          list.
+        - This function reads every line in the nested list excel_data, determines the max rows per plate
+          and deletes all the None's then inserts values so the lists have the same length.
+          Finally it appends the formatted lists to the nested totaal list and
+          returns this nested list to the Dilution() function.
     """
     temp, counter = [], 0
     length_empty = 0
@@ -844,7 +848,8 @@ def Intermediate_result(request):
           a sample ID and the calculated au/ml.
         - delete: A list with selected plate names which are not allowed in end results.
         - mean_ST_dictionary: A dictionary with as key the names of the plates and the value the average score of ODs.
-        - end_dilution: A nested list with the dilution of the plates. the values are all numbers with as type string.
+        - dilution: A nested list with the dilution of the plates. the values are all numbers with as type string.
+        - seprate_dilution: a nested list with the names of plates
     Output:
         - end_result: A dictionary with as key the name of the plates and the values a nested list. the nested list
                       have as values first a sample id, second the au/ml, and third a 1 or 2 or 3.
@@ -852,17 +857,22 @@ def Intermediate_result(request):
         - upper: An au/ml score from the highest chosen value.
     Function:
         - The fuction first checks which plates it should not to be looking if the plate names in intermediate_dictionary
-          are in delete. Then it looks what the values are of the highest chosen value and lowest chosen value. After that
+          are in delete. Then it looks if seprate_dilution is empty or not after this check top and bot will be filled
+          with the dilution belonging to that plate. After that
           it will look if the values from end_result are smaller or bigger then lower or upper. If the value is smaller
           than lower it gets a 1, if higher than upper it gets a 3. If nether than it gets a 2. When the list is filled
-          it gets sorted by sample ID and everything gets put into one list.
+          it gets sorted by sample ID and everything gets put into one list. also two other list are made one with the
+          last 20 of the below values and the first 20 of the linear values. and the other list with the 20 last of the
+          linear values and the 20 first of the above values
     """
     try:
         global end_result
         global lower
         global upper
+        global end_result
         end_result = {}
-        for key, values in intermediate_dictionary.items():
+        kopie_dict = deepcopy(intermediate_dictionary)
+        for key, values in kopie_dict.items():
             if key not in delete:
                 end_result[key] = values
         temp0 = []
@@ -897,31 +907,29 @@ def Intermediate_result(request):
                             temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
                     else:
                         value[2] = 1
-                        temp0.append(value)
+                        temp0.append(value[:3])
                 elif int(value[1]) <= float(string_bot):
                     if len(value) == 2:
                         temp1.append(value + ['below'])
                     else:
                         value[2] = 1
-                        temp1.append(value)
+                        temp1.append(value[:3])
                 elif int(value[1]) >= float(string_top):
                     if len(value) == 2:
                         temp3.append(value + ['above'])
                     else:
                         value[2] = 3
-                        temp3.append(value)
+                        temp3.append(value[:3])
                 else:
                     if len(value) == 2:
                         temp2.append(value + ['linear'])
                     else:
                         value[2] = 2
-                        temp2.append(value)
+                        temp2.append(value[:3])
             mean_ST_dictionary[key].reverse()
         sorted_temp1 = sorted(temp1, key=itemgetter(1))
         sorted_temp2 = sorted(temp2, key=itemgetter(1))
         sorted_temp3 = sorted(temp3, key=itemgetter(1))
-        lower = sorted_temp2[0][1]
-        upper = sorted_temp2[-1][1]
         complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
         if len(sorted_temp1) < 20:
             low_list = sorted_temp1 + sorted_temp2[:20]
@@ -942,7 +950,7 @@ def Intermediate_result(request):
                     'limit_list': up_list,
                     'check': 'go_up'
                 })
-            if request.POST.get('limit_submit'):
+            if request.POST.get('limit_submit_u'):
                 upper = request.POST.get('upper')
         return render(request, 'Intermediate_result.html', {
             'complete_list': complete_list,
@@ -1031,7 +1039,8 @@ def End_results(request):
         - final_dictionary: The dictionary is now filled and has as key sampleID which start with 1 and goes up by 1
                             with every now result. the values are a list with as first a sample id, second an 1 or 2,
                             and third the au/ml.
-        - final_list: A list with as first a sample id, second an 1 or 2 and third the au/ml.
+        - final_list: A list with as first a sample id, second an 0 or 1 , third the au/ml, fourth an OD and if requested
+                      an non-mod OD.
         - cut_off_value_au: An au/ml, calculated from the OD from cut_off_value and the params from params_dictionary.
         - end_result: A dictionary with as key the name of the plates and the values a nested list. the nested list
                       have as values first a sample id, second the au/ml, and third a 1 or 2 or 3.
@@ -1046,6 +1055,8 @@ def End_results(request):
         global final_list
         global cut_off_value_au
         global final_dictionary
+        global end_result
+        rule = 'none'
         if request.method == 'POST':
             if request.POST.get('Empty database'):
                 Plates.objects.all().delete()
@@ -1058,20 +1069,26 @@ def End_results(request):
                     textfile.write("\n")
                 textfile.close()
             if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
-                    request.POST.get('update_table_S'):
+                    request.POST.get('update_table_S') or request.POST.get('update_table_No'):
                 final_dictionary = {}
                 OD_multiplier = request.POST.get('OD_multiplier')
                 if len(end_result[HD][0]) == 2:
                     for keys, values in dictionary.items():
                         if keys == HD:
                             params = params_dictionary[HD]
-                            cut_off_value_au = formula2(float(cut_off_value), *params) * int(dilution[0][3][3])
+                            cut_off_value_au = formula2(float(cut_off_value), *params) * (formula2(float(cut_off_value), *params)*10)
                         if keys not in delete:
                             counter = 0
                             for OD_list in values[1:]:
+                                well = OD_list[0][0]
+                                plate_number = 3
                                 for OD in OD_list[3:]:
                                     end_result[keys][counter].append(OD[0])
+                                    end_result[keys][counter].append(well)
+                                    end_result[keys][counter].append(plate_number)
+                                    end_result[keys][counter].append("hoi casper")
                                     counter += 1
+                                    plate_number += 1
                 sampleID = 1
                 final_list = []
                 for keys, values in end_result.items():
@@ -1084,21 +1101,43 @@ def End_results(request):
                                     if float(elements[1]) >= float(lower):
                                         if elements[1] >= float(cut_off_value_au):
                                             if request.POST.get('update_table_M'):
+                                                rule = 1
                                                 if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
-                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]), values[counter2][2], values[counter2 + 5][2]]
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4],
+                                                                                  values[counter2][3], elements[0], 1,
+                                                                                  round(elements[1]), values[counter2][2],
+                                                                                  values[counter2 + 5][2]]
                                             elif request.POST.get('update_table_H'):
+                                                rule = 2
                                                 OD_multiplier = request.POST.get('OD_higher')
                                                 if (values[counter2][2]) - (values[counter2 + 5][2]) >= int(OD_multiplier):
-                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]), values[counter2][2], values[counter2 + 5][2]]
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4],
+                                                                                  values[counter2][3], elements[0], 1,
+                                                                                  round(elements[1]), values[counter2][2],
+                                                                                  values[counter2 + 5][2]]
+                                            elif request.POST.get('update_table_No'):
+                                                rule = 4
+                                                final_dictionary[sampleID] = [keys, values[counter2][4],
+                                                                              values[counter2][3], elements[0], 1,
+                                                                              round(elements[1]), values[counter2][2],
+                                                                              values[counter2 + 5][2]]
                                             elif request.POST.get('update_table_S'):
+                                                rule = 3
                                                 OD_multiplier = request.POST.get('reference')
                                                 if (round(elements[1])) >= int(OD_multiplier):
-                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]), values[counter2][2], values[counter2 + 5][2]]
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4],
+                                                                                  values[counter2][3], elements[0], 1,
+                                                                                  round(elements[1]), values[counter2][2],
+                                                                                  values[counter2 + 5][2]]
                                     if sampleID not in final_dictionary:
                                         if float(elements[1]) < float(lower):
-                                            final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower), values[counter2][2], values[counter2 + 5][2]]
+                                            final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
+                                                                          elements[0], 0, '<' + str(lower),
+                                                                          values[counter2][2], values[counter2 + 5][2]]
                                         else:
-                                            final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1])), values[counter2][2], values[counter2 + 5][2]]
+                                            final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
+                                                                          elements[0], 0, round(float(elements[1])),
+                                                                          values[counter2][2], values[counter2 + 5][2]]
                                 sampleID += 1
                             counter += 1
                             counter2 += 1
@@ -1106,11 +1145,13 @@ def End_results(request):
                                 counter = 0
                 for i, lists in final_dictionary.items():
                     final_list.append(lists)
-                final_list = sorted(final_list, key=itemgetter(0))
+                final_list = sorted(final_list, key=itemgetter(3))
         return render(request, 'End_results.html', {
             'final_list': final_list,
+            'upper': upper,
             'lower': lower,
             'cut_off_value': round(cut_off_value_au),
+            'rule': rule,
             'unit': unit_name,
         })
     except:
