@@ -54,6 +54,12 @@ final_list = []
 cut_off_value_au = 0
 unit_name = ''
 
+#new globals
+row_standard = ''
+column_standard = ''
+elisa_type = ''
+cut_off_type = ''
+
 
 def Home(request):
     """
@@ -115,7 +121,7 @@ def file_data(request):
         - 'file': A string that is used on the Input_data.html to show a specific error message.
         - 'extension': A string that is used on the Input_data.html to show a specific error message.
     Function:
-        - If there are no files selected but the user did click the submit button a string will be returned to
+        - If there are no files selected, but the user did click the submit button, a string will be returned to
           catch this error. If the user did submit files they are then checked on proper formatting, if not a string
           will be returned to catch this error. If these two checks are passed the files are then passed on to a
           corresponding function that handles the specific extension.
@@ -172,9 +178,9 @@ def formatting_xlsx(file_name):
     Output:
         - data_string: A formatted string with all values seperated by a special character.
     Function:
-        - Opens an excel workbook and reads in all the cells from a specific worksheet. By formatting all the rows
-          to the same length it can then be used to generate the data_string that is then returned to the file_data()
-          function.
+        - Opens an excel workbook and reads in all the cells from a specific worksheet.
+          It checks if the data is from a spectramax file and if so, sends it to the spectra_data function.
+          If not, the data is processed into the data_string and returned to the file_data() function
     """
     wb = openpyxl.load_workbook(file_name)
     active_sheet = wb.active
@@ -197,6 +203,16 @@ def formatting_xlsx(file_name):
 
 
 def spectra_data(excel_data, data_string):
+    """
+        Input:
+            - excel_data: Nested list with all the rows from a submitted excel file.
+            - data_string: An empty string.
+        Output:
+            - data_string: Formatted string with all values seperated by a special character.
+        Function:
+            - Reads in the data from a nested list and adds an indentifier column and row.
+              The data is converted to data_string and returned to the function file_data().
+        """
     for row in range(len(excel_data)):
         del excel_data[row][0]
     title = excel_data[0][0] + " " + excel_data[1][0]
@@ -218,19 +234,20 @@ def spectra_data(excel_data, data_string):
     return data_string
 
 
-def formatting_xls(data):
+def formatting_xls(file_name):
     """
     Input:
-        - data: Nested list with all the rows from a submitted .txt file.
-        - counter: A number that is used to differentiate files that need to be decoded.
+        - file_name: A string that contains the name of a specific file.
     Output:
         - data_string: Formatted string with all values seperated by a special character.
     Function:
-        - Reads in the data from a nested list and formats it in a way so it can be used in a single long string.
-          This string is then returned to the function file_data()
+        - Creates a dataframe an excel workbook and reads in all the cells from a specific worksheet.
+          It create a nested list from this data and processes thid data into the data_string.
+          It checks if the data is from a spectramax file and if so, sends it to the spectra_data function.
+          If not, the data is processed into the data_string and returned to the file_data() function.
     """
     excel_data, data_string = list(), ""
-    df = pd.read_excel(data)
+    df = pd.read_excel(file_name)
     df['Raw Data{Wavelength:415.0}'] = df['Raw Data{Wavelength:415.0}'].fillna('#')
     first = df.columns.values.tolist()
     df_list = df.values.tolist()
@@ -292,8 +309,13 @@ def Plate_layout(request):
           to bottom. If no button was pressed the template simply renders with only the file input field and submit
           button.
     """
-    global check, totaal, unit_name
+    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name
     if request.method == 'POST':
+        elisa_type = request.POST.get('elisa_type')
+        cut_off_type = request.POST.get('cut-off_type')
+        if elisa_type == "1":
+            row_standard = request.POST.get('row_input')
+            column_standard = request.POST.get('column_input')
         if request.POST.get('file_submit'):
             totaal = []
             if request.FILES.getlist("my_file") == []:
@@ -357,19 +379,21 @@ def Plate_layout_2(excel_data):
         - totaal: A nested list with the data from a plate layout file that is properly formatted and stripped of
           None's.
     Function:
-        - This function reads every line in the nested list excel_data and deletes all the None's then inserts values
-          so the lists have the same length. Finally it appends the formatted lists to the nested totaal list and
+        - This function reads every line in the nested list excel_data, determines the max rows per plate
+          and deletes all the None's then inserts values so the lists have the same length.
+          Finally it appends the formatted lists to the nested totaal list and
           returns this nested list to the Plate_layout() function.
     """
     temp, counter = [], 0
     length_empty = 0
     tot_rows = len(excel_data)
     for x in range(len(excel_data)):
-        if 'late 2' in excel_data[x][0]:
-            rows = x - 1
-            break
-        else:
-            rows = tot_rows
+        if x != 0:
+            if 'late ' in excel_data[x][0]:
+                rows = x-1
+                break
+            else:
+                rows = tot_rows
     for i in excel_data:
         k = [e for e in i if e != ('None')]
         if length_empty != 0 and len(k) != 0:
@@ -857,104 +881,104 @@ def Intermediate_result(request):
           than lower it gets a 1, if higher than upper it gets a 3. If nether than it gets a 2. When the list is filled
           it gets sorted by sample ID and everything gets put into one list.
     """
-    try:
-        global end_result
-        global lower
-        global upper
-        end_result = {}
-        for key, values in intermediate_dictionary.items():
-            if key not in delete:
-                end_result[key] = values
-        temp0 = []
-        temp1 = []
-        temp2 = []
-        temp3 = []
-        temp4 = []
-        for key, values in end_result.items():
-            mean_ST_dictionary[key].reverse()
-            top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
-            bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
-            if len(seprate_dilution) != 0:
-                for sep in seprate_dilution[0]:
-                    if sep in key:
-                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
-                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
-                for sep in seprate_dilution[1]:
-                    if sep in key:
-                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
-                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
-            else:
-                for d in range(len(dilution)):
-                    if dilution[d][0][0] in key:
-                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
-                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
-            for value in values:
-                if type(value[1]) == str:
-                    if len(value) == 2:
-                        if float(value[1]) < bot:
-                            temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
-                        else:
-                            temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
+    # try:
+    global end_result
+    global lower
+    global upper
+    end_result = {}
+    for key, values in intermediate_dictionary.items():
+        if key not in delete:
+            end_result[key] = values
+    temp0 = []
+    temp1 = []
+    temp2 = []
+    temp3 = []
+    temp4 = []
+    for key, values in end_result.items():
+        mean_ST_dictionary[key].reverse()
+        top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
+        bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
+        if len(seprate_dilution) != 0:
+            for sep in seprate_dilution[0]:
+                if sep in key:
+                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
+                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
+            for sep in seprate_dilution[1]:
+                if sep in key:
+                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
+                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
+        else:
+            for d in range(len(dilution)):
+                if dilution[d][0][0] in key:
+                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
+                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
+        for value in values:
+            if type(value[1]) == str:
+                if len(value) == 2:
+                    if float(value[1]) < bot:
+                        temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
                     else:
-                        value[2] = 1
-                        temp0.append(value)
-                elif int(value[1]) <= float(string_bot):
-                    if len(value) == 2:
-                        temp1.append(value + ['below'])
-                    else:
-                        value[2] = 1
-                        temp1.append(value)
-                elif int(value[1]) >= float(string_top):
-                    if len(value) == 2:
-                        temp3.append(value + ['above'])
-                    else:
-                        value[2] = 3
-                        temp3.append(value)
+                        temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
                 else:
-                    if len(value) == 2:
-                        temp2.append(value + ['linear'])
-                    else:
-                        value[2] = 2
-                        temp2.append(value)
-            mean_ST_dictionary[key].reverse()
-        sorted_temp1 = sorted(temp1, key=itemgetter(1))
-        sorted_temp2 = sorted(temp2, key=itemgetter(1))
-        sorted_temp3 = sorted(temp3, key=itemgetter(1))
-        lower = sorted_temp2[0][1]
-        upper = sorted_temp2[-1][1]
-        complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
-        if len(sorted_temp1) < 20:
-            low_list = sorted_temp1 + sorted_temp2[:20]
-        else:
-            pos = len(sorted_temp1) - 20
-            low_list = sorted_temp1[pos:] + sorted_temp2[:20]
-        if len(sorted_temp2) < 20:
-            up_list = sorted_temp2 + sorted_temp3[:20]
-        else:
-            pos = len(sorted_temp2) - 20
-            up_list = sorted_temp2[pos:] + sorted_temp3[:20]
-        if request.method == 'POST':
-            if request.POST.get('limit_submit_l'):
-                lower = request.POST.get('lower')
-                return render(request, 'Intermediate_result.html', {
-                    'complete_list': complete_list,
-                    'unit': unit_name,
-                    'limit_list': up_list,
-                    'check': 'go_up'
-                })
-            if request.POST.get('limit_submit'):
-                upper = request.POST.get('upper')
-        return render(request, 'Intermediate_result.html', {
-            'complete_list': complete_list,
-            'unit': unit_name,
-            'limit_list' : low_list,
-            'check' : 'go_low'
-        })
-    except:
-        return render(request, 'Error.html', {
-            'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
-                     'your preferences on the visualize Data page.'
-        })
+                    value[2] = 1
+                    temp0.append(value)
+            elif int(value[1]) <= float(string_bot):
+                if len(value) == 2:
+                    temp1.append(value + ['below'])
+                else:
+                    value[2] = 1
+                    temp1.append(value)
+            elif int(value[1]) >= float(string_top):
+                if len(value) == 2:
+                    temp3.append(value + ['above'])
+                else:
+                    value[2] = 3
+                    temp3.append(value)
+            else:
+                if len(value) == 2:
+                    temp2.append(value + ['linear'])
+                else:
+                    value[2] = 2
+                    temp2.append(value)
+        mean_ST_dictionary[key].reverse()
+    sorted_temp1 = sorted(temp1, key=itemgetter(1))
+    sorted_temp2 = sorted(temp2, key=itemgetter(1))
+    sorted_temp3 = sorted(temp3, key=itemgetter(1))
+    lower = sorted_temp2[0][1]
+    upper = sorted_temp2[-1][1]
+    complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
+    if len(sorted_temp1) < 20:
+        low_list = sorted_temp1 + sorted_temp2[:20]
+    else:
+        pos = len(sorted_temp1) - 20
+        low_list = sorted_temp1[pos:] + sorted_temp2[:20]
+    if len(sorted_temp2) < 20:
+        up_list = sorted_temp2 + sorted_temp3[:20]
+    else:
+        pos = len(sorted_temp2) - 20
+        up_list = sorted_temp2[pos:] + sorted_temp3[:20]
+    if request.method == 'POST':
+        if request.POST.get('limit_submit_l'):
+            lower = request.POST.get('lower')
+            return render(request, 'Intermediate_result.html', {
+                'complete_list': complete_list,
+                'unit': unit_name,
+                'limit_list': up_list,
+                'check': 'go_up'
+            })
+        if request.POST.get('limit_submit'):
+            upper = request.POST.get('upper')
+    return render(request, 'Intermediate_result.html', {
+        'complete_list': complete_list,
+        'unit': unit_name,
+        'limit_list' : low_list,
+        'check' : 'go_low'
+    })
+    # except:
+    #     return render(request, 'Error.html', {
+    #         'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
+    #                  'your preferences on the visualize Data page.'
+    #     })
 
 def intermediate_list(key, params):
     """
