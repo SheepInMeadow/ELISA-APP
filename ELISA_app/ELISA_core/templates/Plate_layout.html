@@ -5,31 +5,67 @@
 
 {% block content %}
     {% load static %}
+    {{script | safe}}
     <link rel="stylesheet" type="text/css"
           href="{% static 'css/Plate_layout.css' %}">
+    <script src="{% static 'javascript/placeholder.js' %}"></script>
+
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <div class="plate_top">
-        <input type="file" name="my_file" class="plate_file"/>
-        <input type="submit" name="file_submit" value="Upload data" class="plate_button"/><br><br>
-        {% if check == 'error' %}
-            <p class="message_fail">No file was selected, please try again.</p>
-        {% endif %}
-    </div>
-{% if check == 'go' %}
-    <div class="plate_st_text">
-        ST values of all plates: <input type="number" name="standaard" class="plate_st_input"><br><br>
-        <input type="submit" name="standaard_input" value="Update table" class="plate_table_button">
+        <div class="ELISA_type">
+            Select data input type:<br><br>
+            <input type="radio" id="mod/non" name="elisa_type" value="1" onclick="myFunction('mod/non')">
+            <label for="mod/non" class="gen_text">Modified/Non-modified ELISA</label><br>
+            <input type="radio" id="general" name="elisa_type" value="2" onclick="myFunction('general')">
+            <label for="general" class="gen_text">General ELISA</label><br><br>
+        </div>
+
+        <div class="cut-off">
+            Cut-off or no cut-off:<br><br>
+            <input type="radio" id="cut-off" name="cut-off_type" value="1">
+            <label for="cut-off" class="gen_text">I want to use HDs to calculate a cut-off</label><br>
+            <input type="radio" id="no_cut-off" name="cut-off_type" value="2">
+            <label for="no_cut-off" class="gen_text">I don’t want to calculate a cut-off</label><br><br>
+        </div>
+
+        <br><br>
+
+        <div class="input" id="input" style="display: none">
+            <div id="mod" >
+                Select where the standard is located and upload the data:<br>
+                <input type="radio" id="row" name="reference" onclick="referenceSelect()">
+                <label for="row" class="gen_text">Row</label>
+                <input type="text" id="row_input" name="row_input" disabled>
+                <br>
+                <input type="radio" id="column" name="reference" onclick="referenceSelect()">
+                <label for="column" class="gen_text">Column</label>
+                <input type="text" id="column_input" name="column_input" disabled>
+                Please input column numbers in this format: 2, 3<br><br>
+            </div>
+            <input type="file" name="my_file" class="plate_file"/>
+            <input type="submit" name="file_submit" value="Upload data" class="plate_button"/><br><br>
+            {% if check == 'error' %}
+                <p class="message_fail">No file was selected, please try again.</p>
+            {% endif %}
+
+        </div>
+    {% if check == 'go' %}
+        <div class="plate_st_text">
+            ST values of all plates: <input type="number" name="standaard" class="plate_st_input"><br><br>
+            <input type="submit" name="standaard_input" value="Update table" class="plate_table_button">
+        </div>
     </div>
 </form>
+
 {% for i in totaal %}
     <table>
         {% for j in i %}
-        <tr>
-            {% for k in j %}
-            <td>{{k}}</td>
-            {% endfor %}
-        </tr>
+            <tr>
+                {% for k in j %}
+                    <td>{{k}}</td>
+                {% endfor %}
+            </tr>
         {% endfor %}
     </table>
 {% endfor %}

@@ -51,6 +51,12 @@ final_dictionary = {}
 final_list = []
 cut_off_value_au = 0
 
+#new globals
+row_standard = ''
+column_standard = ''
+elisa_type = ''
+cut_off_type = ''
+
 
 def Home(request):
     """
@@ -300,8 +306,13 @@ def Plate_layout(request):
           to bottom. If no button was pressed the template simply renders with only the file input field and submit
           button.
     """
-    global check, totaal
+    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type
     if request.method == 'POST':
+        elisa_type = request.POST.get('elisa_type')
+        cut_off_type = request.POST.get('cut-off_type')
+        if elisa_type == "1":
+            row_standard = request.POST.get('row_input')
+            column_standard = request.POST.get('column_input')
         if request.POST.get('file_submit'):
             totaal = []
             if request.FILES.getlist("my_file") == []:
