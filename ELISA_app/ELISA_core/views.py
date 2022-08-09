@@ -312,11 +312,12 @@ def Plate_layout(request):
     """
     global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name
     if request.method == 'POST':
-        elisa_type = request.POST.get('elisa_type')
-        cut_off_type = request.POST.get('cut-off_type')
-        if elisa_type == "1":
-            row_standard = request.POST.get('row_input')
-            column_standard = request.POST.get('column_input')
+        if request.POST.get('file_submit'):
+            elisa_type = request.POST.get('elisa_type')
+            cut_off_type = request.POST.get('cut-off_type')
+            if elisa_type == "1":
+                row_standard = request.POST.get('row_input')
+                column_standard = request.POST.get('column_input')
         if request.POST.get('file_submit'):
             totaal = []
             if request.FILES.getlist("my_file") == []:
@@ -762,7 +763,13 @@ def Cut_off(request):
         global check_cut_off
         global outlier_value
         global cut_off_value
+        global elisa_type
         cut_dict = {}
+        if cut_off_type == '2':
+            return render(request, 'Error.html', {
+                'error': 'In plate layout was selected to not use HD for cutoff. Go to intermediate result to continue'
+                         ' the application'
+            })
         if request.method == 'POST':
             if request.POST.get('outlier_submit'):
                 input1 = request.POST.get('input1')
@@ -806,9 +813,14 @@ def Cut_off(request):
                     'cut_off_value': cut_off_value,
                 })
         elif cut_data == []:
-            for i in dictionary[HD][1:]:
-                for g in i[3:8]:
-                    cut_data.append(g[0])
+            if elisa_type == '1':
+                for i in dictionary[HD][1:]:
+                    for g in i[3:8]:
+                        cut_data.append(g[0])
+            elif elisa_type == '2':
+                for i in dictionary[HD][1:]:
+                    for g in i[3:]:
+                        cut_data.append(g[0])
             cut_data.pop(0)
             cut_dict["OD"] = cut_data
             mean = round(statistics.mean(cut_data), 3)
@@ -925,34 +937,39 @@ def Intermediate_result(request):
                     if dilution[d][0][0] in key:
                         string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
                         string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
+            count_mod = 0
             for value in values:
-                if type(value[1]) == str:
-                    if len(value) == 2:
-                        if float(value[1]) < bot:
-                            temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
+                if count_mod == 10:
+                   count_mod = 0
+                if count_mod < 5 or elisa_type == '2':
+                    if type(value[1]) == str:
+                        if len(value) == 2:
+                            if float(value[1]) < bot:
+                                temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
+                            else:
+                                temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
                         else:
-                            temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
+                            value[2] = 1
+                            temp0.append(value[:3])
+                    elif int(value[1]) <= float(string_bot):
+                        if len(value) == 2:
+                            temp1.append(value + ['below'])
+                        else:
+                            value[2] = 1
+                            temp1.append(value[:3])
+                    elif int(value[1]) >= float(string_top):
+                        if len(value) == 2:
+                            temp3.append(value + ['above'])
+                        else:
+                            value[2] = 3
+                            temp3.append(value[:3])
                     else:
-                        value[2] = 1
-                        temp0.append(value[:3])
-                elif int(value[1]) <= float(string_bot):
-                    if len(value) == 2:
-                        temp1.append(value + ['below'])
-                    else:
-                        value[2] = 1
-                        temp1.append(value[:3])
-                elif int(value[1]) >= float(string_top):
-                    if len(value) == 2:
-                        temp3.append(value + ['above'])
-                    else:
-                        value[2] = 3
-                        temp3.append(value[:3])
-                else:
-                    if len(value) == 2:
-                        temp2.append(value + ['linear'])
-                    else:
-                        value[2] = 2
-                        temp2.append(value[:3])
+                        if len(value) == 2:
+                            temp2.append(value + ['linear'])
+                        else:
+                            value[2] = 2
+                            temp2.append(value[:3])
+                count_mod += 1
             mean_ST_dictionary[key].reverse()
         sorted_temp1 = sorted(temp1, key=itemgetter(1))
         sorted_temp2 = sorted(temp2, key=itemgetter(1))
@@ -1103,7 +1120,7 @@ def End_results(request):
                     for keys, values in dictionary.items():
                         if keys == HD:
                             params = params_dictionary[HD]
-                            cut_off_value_au = formula2(float(cut_off_value), *params) * (formula2(float(cut_off_value), *params)*10)
+                            cut_off_value_au = formula2(float(cut_off_value), *params) * 1
                         if keys not in delete:
                             counter = 0
                             for OD_list in values[1:]:
@@ -1179,6 +1196,8 @@ def End_results(request):
             'cut_off_value': round(cut_off_value_au),
             'rule': rule,
             'unit': unit_name,
+            'elisa_type': elisa_type,
+            'cut_off_type': cut_off_type,
         })
     except:
         return render(request, 'Error.html', {
