@@ -52,9 +52,12 @@
         </div>
     {% if check == 'go' %}
         <div class="plate_st_text">
-            ST values of all plates: <input type="number" name="standaard" class="plate_st_input"><br><br>
-            <input type="submit" name="standaard_input" value="Update table" class="plate_table_button">
-        </div>
+            ST values of all plates: <input required type="number" name="standaard" class="plate_st_input">
+            Divide number: <input required type="number" name="divide" class="plate_st_input"><br><br>
+            Unit name: <input required type="text" name="unit" class="plate_st_input">
+            <br><br>
+        <input type="submit" name="standaard_input" value="Update table" class="plate_table_button">
+    </div>
     </div>
 </form>
 

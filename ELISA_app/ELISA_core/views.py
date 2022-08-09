@@ -881,104 +881,104 @@ def Intermediate_result(request):
           than lower it gets a 1, if higher than upper it gets a 3. If nether than it gets a 2. When the list is filled
           it gets sorted by sample ID and everything gets put into one list.
     """
-    try:
-        global end_result
-        global lower
-        global upper
-        end_result = {}
-        for key, values in intermediate_dictionary.items():
-            if key not in delete:
-                end_result[key] = values
-        temp0 = []
-        temp1 = []
-        temp2 = []
-        temp3 = []
-        temp4 = []
-        for key, values in end_result.items():
-            mean_ST_dictionary[key].reverse()
-            top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
-            bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
-            if len(seprate_dilution) != 0:
-                for sep in seprate_dilution[0]:
-                    if sep in key:
-                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
-                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
-                for sep in seprate_dilution[1]:
-                    if sep in key:
-                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
-                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
-            else:
-                for d in range(len(dilution)):
-                    if dilution[d][0][0] in key:
-                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
-                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
-            for value in values:
-                if type(value[1]) == str:
-                    if len(value) == 2:
-                        if float(value[1]) < bot:
-                            temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
-                        else:
-                            temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
+    # try:
+    global end_result
+    global lower
+    global upper
+    end_result = {}
+    for key, values in intermediate_dictionary.items():
+        if key not in delete:
+            end_result[key] = values
+    temp0 = []
+    temp1 = []
+    temp2 = []
+    temp3 = []
+    temp4 = []
+    for key, values in end_result.items():
+        mean_ST_dictionary[key].reverse()
+        top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
+        bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
+        if len(seprate_dilution) != 0:
+            for sep in seprate_dilution[0]:
+                if sep in key:
+                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
+                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
+            for sep in seprate_dilution[1]:
+                if sep in key:
+                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
+                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
+        else:
+            for d in range(len(dilution)):
+                if dilution[d][0][0] in key:
+                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
+                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
+        for value in values:
+            if type(value[1]) == str:
+                if len(value) == 2:
+                    if float(value[1]) < bot:
+                        temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
                     else:
-                        value[2] = 1
-                        temp0.append(value)
-                elif int(value[1]) <= float(string_bot):
-                    if len(value) == 2:
-                        temp1.append(value + ['below'])
-                    else:
-                        value[2] = 1
-                        temp1.append(value)
-                elif int(value[1]) >= float(string_top):
-                    if len(value) == 2:
-                        temp3.append(value + ['above'])
-                    else:
-                        value[2] = 3
-                        temp3.append(value)
+                        temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
                 else:
-                    if len(value) == 2:
-                        temp2.append(value + ['linear'])
-                    else:
-                        value[2] = 2
-                        temp2.append(value)
-            mean_ST_dictionary[key].reverse()
-        sorted_temp1 = sorted(temp1, key=itemgetter(1))
-        sorted_temp2 = sorted(temp2, key=itemgetter(1))
-        sorted_temp3 = sorted(temp3, key=itemgetter(1))
-        lower = sorted_temp2[0][1]
-        upper = sorted_temp2[-1][1]
-        complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
-        if len(sorted_temp1) < 20:
-            low_list = sorted_temp1 + sorted_temp2[:20]
-        else:
-            pos = len(sorted_temp1) - 20
-            low_list = sorted_temp1[pos:] + sorted_temp2[:20]
-        if len(sorted_temp2) < 20:
-            up_list = sorted_temp2 + sorted_temp3[:20]
-        else:
-            pos = len(sorted_temp2) - 20
-            up_list = sorted_temp2[pos:] + sorted_temp3[:20]
-        if request.method == 'POST':
-            if request.POST.get('limit_submit_l'):
-                lower = request.POST.get('lower')
-                return render(request, 'Intermediate_result.html', {
-                    'complete_list': complete_list,
-                    'unit': unit_name,
-                    'limit_list': up_list,
-                    'check': 'go_up'
-                })
-            if request.POST.get('limit_submit'):
-                upper = request.POST.get('upper')
-        return render(request, 'Intermediate_result.html', {
-            'complete_list': complete_list,
-            'unit': unit_name,
-            'limit_list' : low_list,
-            'check' : 'go_low'
-        })
-    except:
-        return render(request, 'Error.html', {
-            'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
-                     'your preferences on the visualize Data page.'
-        })
+                    value[2] = 1
+                    temp0.append(value)
+            elif int(value[1]) <= float(string_bot):
+                if len(value) == 2:
+                    temp1.append(value + ['below'])
+                else:
+                    value[2] = 1
+                    temp1.append(value)
+            elif int(value[1]) >= float(string_top):
+                if len(value) == 2:
+                    temp3.append(value + ['above'])
+                else:
+                    value[2] = 3
+                    temp3.append(value)
+            else:
+                if len(value) == 2:
+                    temp2.append(value + ['linear'])
+                else:
+                    value[2] = 2
+                    temp2.append(value)
+        mean_ST_dictionary[key].reverse()
+    sorted_temp1 = sorted(temp1, key=itemgetter(1))
+    sorted_temp2 = sorted(temp2, key=itemgetter(1))
+    sorted_temp3 = sorted(temp3, key=itemgetter(1))
+    lower = sorted_temp2[0][1]
+    upper = sorted_temp2[-1][1]
+    complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
+    if len(sorted_temp1) < 20:
+        low_list = sorted_temp1 + sorted_temp2[:20]
+    else:
+        pos = len(sorted_temp1) - 20
+        low_list = sorted_temp1[pos:] + sorted_temp2[:20]
+    if len(sorted_temp2) < 20:
+        up_list = sorted_temp2 + sorted_temp3[:20]
+    else:
+        pos = len(sorted_temp2) - 20
+        up_list = sorted_temp2[pos:] + sorted_temp3[:20]
+    if request.method == 'POST':
+        if request.POST.get('limit_submit_l'):
+            lower = request.POST.get('lower')
+            return render(request, 'Intermediate_result.html', {
+                'complete_list': complete_list,
+                'unit': unit_name,
+                'limit_list': up_list,
+                'check': 'go_up'
+            })
+        if request.POST.get('limit_submit'):
+            upper = request.POST.get('upper')
+    return render(request, 'Intermediate_result.html', {
+        'complete_list': complete_list,
+        'unit': unit_name,
+        'limit_list' : low_list,
+        'check' : 'go_low'
+    })
+    # except:
+    #     return render(request, 'Error.html', {
+    #         'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
+    #                  'your preferences on the visualize Data page.'
+    #     })
 
 def intermediate_list(key, params):
     """
