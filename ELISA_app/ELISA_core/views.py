@@ -947,8 +947,7 @@ def Intermediate_result(request):
                     if len(value) == 2:
                         temp3.append(value + ['above'])
                     else:
-                        value[2] = 3
-                        temp3.append(value)
+                        temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
                 else:
                     if len(value) == 2:
                         temp2.append(value + ['linear'])
@@ -989,7 +988,7 @@ def Intermediate_result(request):
             'limit_list' : low_list,
             'check' : 'go_low'
         })
-    except:
+    except KeyboardInterrupt: #TODO look at this
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
                      'your preferences on the visualize Data page.'
@@ -1020,7 +1019,6 @@ def intermediate_list(key, params):
         num2 = int(''.join(filter(str.isdigit, totaal[options][0][0])))
         if num1 == num2:
             position = options
-    dilution = end_dilution[3][3]
     list1 = []
     for i, j in dictionary.items():
         if i == key:
@@ -1195,3 +1193,4 @@ def session_readin(session):
         Plates.objects.all().delete()
         for plate in serializers.deserialize("xml", sessiontuple[-1]):
             plate.save()
+
