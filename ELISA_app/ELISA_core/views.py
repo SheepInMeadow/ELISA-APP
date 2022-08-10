@@ -1,3 +1,4 @@
+import os
 from django.shortcuts import render
 from .models import Plates
 import openpyxl
@@ -11,55 +12,62 @@ import statistics
 from operator import itemgetter
 import xlrd
 import string
-
-
-#Make multithreading safe
+import pickle
+from django.core import serializers
+from django.conf import settings
+from os.path import join
+from os import sep, listdir
+# Make multithreading safe
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-# session = {totaal : [], 'check' : '', 'end_dilution' : [], 'dictionary' : {},             for perhaps use in database
-#            'HD' : '', 'delete' : [], 'points_dictionary' : {},
-#            'mean_ST_dictionary' : {}, 'mean' : 0, 'std' : 0, 'mean2' : 0,
-#            'std2' : 0, 'check_cut_off' : 'false', 'cut_data' : [],
-#            'outlier_value' : 0.0, 'cut_off_value' : 0.0, 'end_result' : {},
-#            'lower' : 0.0, 'upper' : 0.0, 'intermediate_dictionary' : {},
-#            'params_dictionary' : {}, 'final_dictionary' : {},
-#            'final_list' : [], 'cut_off_value_au' : 0}
+version_number = 1.1
 
-totaal = []
-check = ''
-check2 = ''
-dilution = []
-seprate_dilution = []
-dictionary = {}
-HD = ''
-delete = []
-points_dictionary = {}
-mean_ST_dictionary = {}
-mean = 0
-std = 0
-mean2 = 0
-std2 = 0
-check_cut_off = 'false'
-cut_data = []
-outlier_value = 0.0
-cut_off_value = 0.0
-end_result = {}
-lower = 0.0
-upper = 0.0
-intermediate_dictionary = {}
-params_dictionary = {}
-final_dictionary = {}
-final_list = []
-cut_off_value_au = 0
-unit_name = ''
+def reset_data():
+    #set globals
+    global totaal; totaal = []
+    global check; check = ''
+    global check2; check2 = ''
+    global dilution; dilution = []
+    global seprate_dilution; seprate_dilution = []
+    global end_dilution; end_dilution = [] #todo is this even used anymore?
+    global dictionary; dictionary = {}
+    global HD; HD = ''
+    global delete; delete = []
+    global points_dictionary; points_dictionary = {}
+    global mean_ST_dictionary; mean_ST_dictionary = {}
+    global mean; mean = 0
+    global std; std = 0
+    global mean2; mean2 = 0
+    global std2; std2 = 0
+    global check_cut_off; check_cut_off = 'false'
+    global cut_data; cut_data = []
+    global outlier_value; outlier_value = 0.0
+    global cut_off_value; cut_off_value = 0.0
+    global end_result; end_result = {}
+    global lower; lower = 0.0
+    global upper; upper = 0.0
+    global intermediate_dictionary; intermediate_dictionary = {}
+    global params_dictionary; params_dictionary = {}
+    global final_dictionary; final_dictionary = {}
+    global final_list; final_list = []
+    global cut_off_value_au; cut_off_value_au = 0
+    global unit_name; unit_name = ''
+    global row_standard; row_standard = ''
+    global column_standard; column_standard = ''
+    global elisa_type; elisa_type = ''
+    global cut_off_type; cut_off_type = ''
+    #empty plates from db
+    Plates.objects.all().delete()
+    #empty pngs from images
+    for file in listdir(get_mediapath()):
+        if file.endswith('.png'):
+            os.remove(get_mediapath(file))
+    return
 
-#new globals
-row_standard = ''
-column_standard = ''
-elisa_type = ''
-cut_off_type = ''
-
+def get_mediapath(extension=''):
+    mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
+    return mediapath
 
 def Home(request):
     """
@@ -70,7 +78,14 @@ def Home(request):
     Function:
         - Renders the template Home.html when the page is visited.
     """
-    return render(request, 'Home.html')
+    if request.method == 'POST':
+        if request.POST.get('download_pickle'):
+            session_writeout("Manual Session")
+        elif request.POST.get('submit_pickle'):
+            session_readin(request.FILES['my_pickle'])
+    return render(request, 'Home.html', {
+            'version': version_number,
+        })
 
 
 def Input_data(request):
@@ -81,7 +96,7 @@ def Input_data(request):
         -
     Function:
         - Checks if the user clicked the button to empty the database and then renders the page with a message
-          indicating that it was succesfullly emptied. Then checks for if there were any files submitted, if so it will
+          indicating that it was successfullly emptied. Then checks for if there were any files submitted, if so it will
           send the data to the file_data() function. The variable error is then used to determine if the submitted files
           were incorrectly formatted and shows the corresponding error on the page. If all is ok the page renders with
           a message to inform the user of this. If any other error occurs which is not properly caught, the page will
@@ -91,7 +106,7 @@ def Input_data(request):
         if request.method == 'POST':
             error = 'correct'
             if request.POST.get('Empty database'):
-                Plates.objects.all().delete()
+                reset_data()
                 return render(request, 'Input_data.html', {
                     'check': 'correct_emptied',
                 })
@@ -698,7 +713,7 @@ def create_graph(dictionary):
         ax = plt.gca()
         plt.xticks([1.0, 10, 100])
         ax.xaxis.set_major_formatter(ScalarFormatter())
-        plt.savefig('ELISA_core/static/images/' + str(key) + '.png')
+        plt.savefig(get_mediapath(str(key) + ".png"))
         plt.close()
         counter += 1
 
@@ -775,7 +790,7 @@ def Cut_off(request):
                 df = pd.DataFrame(data=cut_dict)
                 ax = sns.swarmplot(data=df, y="New_OD")
                 ax = sns.boxplot(data=df, y="New_OD", color='white')
-                plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')
+                plt.savefig(get_mediapath('swarmplot2.png'))
                 plt.close()
                 check_cut_off = 'true'
                 return render(request, 'Cut_off.html', {
@@ -812,7 +827,7 @@ def Cut_off(request):
             df = pd.DataFrame(data=cut_dict)
             ax = sns.swarmplot(data=df, y="OD")
             ax = sns.boxplot(data=df, y="OD", color='white')
-            plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')
+            plt.savefig(get_mediapath('swarmplot.png'))
             plt.close()
             return render(request, 'Cut_off.html', {
                 'mean': mean,
@@ -881,104 +896,103 @@ def Intermediate_result(request):
           than lower it gets a 1, if higher than upper it gets a 3. If nether than it gets a 2. When the list is filled
           it gets sorted by sample ID and everything gets put into one list.
     """
-    # try:
-    global end_result
-    global lower
-    global upper
-    end_result = {}
-    for key, values in intermediate_dictionary.items():
-        if key not in delete:
-            end_result[key] = values
-    temp0 = []
-    temp1 = []
-    temp2 = []
-    temp3 = []
-    temp4 = []
-    for key, values in end_result.items():
-        mean_ST_dictionary[key].reverse()
-        top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
-        bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
-        if len(seprate_dilution) != 0:
-            for sep in seprate_dilution[0]:
-                if sep in key:
-                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
-                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
-            for sep in seprate_dilution[1]:
-                if sep in key:
-                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
-                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
-        else:
-            for d in range(len(dilution)):
-                if dilution[d][0][0] in key:
-                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
-                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
-        for value in values:
-            if type(value[1]) == str:
-                if len(value) == 2:
-                    if float(value[1]) < bot:
-                        temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
+    try:
+        global end_result
+        global lower
+        global upper
+        end_result = {}
+        for key, values in intermediate_dictionary.items():
+            if key not in delete:
+                end_result[key] = values
+        temp0 = []
+        temp1 = []
+        temp2 = []
+        temp3 = []
+        temp4 = []
+        for key, values in end_result.items():
+            mean_ST_dictionary[key].reverse()
+            top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
+            bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
+            if len(seprate_dilution) != 0:
+                for sep in seprate_dilution[0]:
+                    if sep in key:
+                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
+                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
+                for sep in seprate_dilution[1]:
+                    if sep in key:
+                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
+                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
+            else:
+                for d in range(len(dilution)):
+                    if dilution[d][0][0] in key:
+                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
+                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
+            for value in values:
+                if type(value[1]) == str:
+                    if len(value) == 2:
+                        if float(value[1]) < bot:
+                            temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
+                        else:
+                            temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
+                    else:
+                        value[2] = 1
+                        temp0.append(value)
+                elif int(value[1]) <= float(string_bot):
+                    if len(value) == 2:
+                        temp1.append(value + ['below'])
+                    else:
+                        value[2] = 1
+                        temp1.append(value)
+                elif int(value[1]) >= float(string_top):
+                    if len(value) == 2:
+                        temp3.append(value + ['above'])
                     else:
                         temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
                 else:
-                    value[2] = 1
-                    temp0.append(value)
-            elif int(value[1]) <= float(string_bot):
-                if len(value) == 2:
-                    temp1.append(value + ['below'])
-                else:
-                    value[2] = 1
-                    temp1.append(value)
-            elif int(value[1]) >= float(string_top):
-                if len(value) == 2:
-                    temp3.append(value + ['above'])
-                else:
-                    value[2] = 3
-                    temp3.append(value)
-            else:
-                if len(value) == 2:
-                    temp2.append(value + ['linear'])
-                else:
-                    value[2] = 2
-                    temp2.append(value)
-        mean_ST_dictionary[key].reverse()
-    sorted_temp1 = sorted(temp1, key=itemgetter(1))
-    sorted_temp2 = sorted(temp2, key=itemgetter(1))
-    sorted_temp3 = sorted(temp3, key=itemgetter(1))
-    lower = sorted_temp2[0][1]
-    upper = sorted_temp2[-1][1]
-    complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
-    if len(sorted_temp1) < 20:
-        low_list = sorted_temp1 + sorted_temp2[:20]
-    else:
-        pos = len(sorted_temp1) - 20
-        low_list = sorted_temp1[pos:] + sorted_temp2[:20]
-    if len(sorted_temp2) < 20:
-        up_list = sorted_temp2 + sorted_temp3[:20]
-    else:
-        pos = len(sorted_temp2) - 20
-        up_list = sorted_temp2[pos:] + sorted_temp3[:20]
-    if request.method == 'POST':
-        if request.POST.get('limit_submit_l'):
-            lower = request.POST.get('lower')
-            return render(request, 'Intermediate_result.html', {
-                'complete_list': complete_list,
-                'unit': unit_name,
-                'limit_list': up_list,
-                'check': 'go_up'
-            })
-        if request.POST.get('limit_submit'):
-            upper = request.POST.get('upper')
-    return render(request, 'Intermediate_result.html', {
-        'complete_list': complete_list,
-        'unit': unit_name,
-        'limit_list' : low_list,
-        'check' : 'go_low'
-    })
-    # except:
-    #     return render(request, 'Error.html', {
-    #         'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
-    #                  'your preferences on the visualize Data page.'
-    #     })
+                    if len(value) == 2:
+                        temp2.append(value + ['linear'])
+                    else:
+                        value[2] = 2
+                        temp2.append(value)
+            mean_ST_dictionary[key].reverse()
+        sorted_temp1 = sorted(temp1, key=itemgetter(1))
+        sorted_temp2 = sorted(temp2, key=itemgetter(1))
+        sorted_temp3 = sorted(temp3, key=itemgetter(1))
+        lower = sorted_temp2[0][1]
+        upper = sorted_temp2[-1][1]
+        complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
+        if len(sorted_temp1) < 20:
+            low_list = sorted_temp1 + sorted_temp2[:20]
+        else:
+            pos = len(sorted_temp1) - 20
+            low_list = sorted_temp1[pos:] + sorted_temp2[:20]
+        if len(sorted_temp2) < 20:
+            up_list = sorted_temp2 + sorted_temp3[:20]
+        else:
+            pos = len(sorted_temp2) - 20
+            up_list = sorted_temp2[pos:] + sorted_temp3[:20]
+        if request.method == 'POST':
+            if request.POST.get('limit_submit_l'):
+                lower = request.POST.get('lower')
+                return render(request, 'Intermediate_result.html', {
+                    'complete_list': complete_list,
+                    'unit': unit_name,
+                    'limit_list': up_list,
+                    'check': 'go_up'
+                })
+            if request.POST.get('limit_submit'):
+                upper = request.POST.get('upper')
+        return render(request, 'Intermediate_result.html', {
+            'complete_list': complete_list,
+            'unit': unit_name,
+            'limit_list' : low_list,
+            'check' : 'go_low'
+        })
+    except KeyboardInterrupt: #TODO look at this
+        return render(request, 'Error.html', {
+            'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
+                     'your preferences on the visualize Data page.'
+        })
 
 def intermediate_list(key, params):
     """
@@ -1072,7 +1086,7 @@ def End_results(request):
         global final_dictionary
         if request.method == 'POST':
             if request.POST.get('Empty database'):
-                Plates.objects.all().delete()
+                reset_data()
             if request.POST.get('download'):
                 file_name = request.POST.get('File_name')
                 textfile = open("../Download_files/" + file_name + ".txt", "w")
@@ -1108,36 +1122,75 @@ def End_results(request):
                                     if float(elements[1]) >= float(lower):
                                         if elements[1] >= float(cut_off_value_au):
                                             if request.POST.get('update_table_M'):
-                                                if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
-                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]), values[counter2][2], values[counter2 + 5][2]]
+                                                if (values[counter2][2]) / (values[counter2 + 5][2]) >= int(
+                                                        OD_multiplier):
+                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]),
+                                                                                  values[counter2][2],
+                                                                                  values[counter2 + 5][2]]
                                             elif request.POST.get('update_table_H'):
                                                 OD_multiplier = request.POST.get('OD_higher')
-                                                if (values[counter2][2]) - (values[counter2 + 5][2]) >= int(OD_multiplier):
-                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]), values[counter2][2], values[counter2 + 5][2]]
+                                                if (values[counter2][2]) - (values[counter2 + 5][2]) >= int(
+                                                        OD_multiplier):
+                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]),
+                                                                                  values[counter2][2],
+                                                                                  values[counter2 + 5][2]]
                                             elif request.POST.get('update_table_S'):
                                                 OD_multiplier = request.POST.get('reference')
                                                 if (round(elements[1])) >= int(OD_multiplier):
-                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]), values[counter2][2], values[counter2 + 5][2]]
+                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]),
+                                                                                  values[counter2][2],
+                                                                                  values[counter2 + 5][2]]
                                     if sampleID not in final_dictionary:
                                         if float(elements[1]) < float(lower):
-                                            final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower), values[counter2][2], values[counter2 + 5][2]]
+                                            final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower),
+                                                                          values[counter2][2], values[counter2 + 5][2]]
                                         else:
-                                            final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1])), values[counter2][2], values[counter2 + 5][2]]
+                                            final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1])),
+                                                                          values[counter2][2], values[counter2 + 5][2]]
                                 sampleID += 1
                             counter += 1
                             counter2 += 1
                             if counter == 10:
                                 counter = 0
-                for i, lists in final_dictionary.items():
-                    final_list.append(lists)
-                final_list = sorted(final_list, key=itemgetter(0))
-        return render(request, 'End_results.html', {
-            'final_list': final_list,
-            'lower': lower,
-            'cut_off_value': round(cut_off_value_au),
-            'unit': unit_name,
-        })
+                    for i, lists in final_dictionary.items():
+                        final_list.append(lists)
+                    final_list = sorted(final_list, key=itemgetter(0))
+                    return render(request, 'End_results.html', {
+                        'final_list': final_list,
+                        'lower': lower,
+                        'cut_off_value': round(cut_off_value_au),
+                        'unit': unit_name,
+                    })
     except:
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
         })
+
+def session_writeout(session_name): #Note: current pickle version = 4, supported from py 3.4 and default from py 3.8
+    session_name += ".ELISA_App"
+    with open(session_name, 'wb') as f:
+        pickle.dump((totaal, check, end_dilution, dictionary, HD, delete, points_dictionary, mean_ST_dictionary, mean,
+                     std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
+                     intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au,
+                     serializers.serialize("xml", Plates.objects.all())), f, protocol=4) #Plates.objects is serialized to xml, preventing upgrading issues with Django
+        print("pickle success")
+
+
+def session_readin(session):
+    varlist = (
+    "totaal", "check", "end_dilution", "dictionary", "HD", "delete", "points_dictionary", "mean_ST_dictionary", "mean",
+    "std", "mean2", "std2", "check_cut_off", "cut_data", "outlier_value", "cut_off_value", "end_result", "lower",
+    "upper", "intermediate_dictionary", "params_dictionary", "final_dictionary", "final_list", "cut_off_value_au")
+
+    with session as f:
+        sessiontuple = pickle.load(f)
+        #[:-1] to exclude serialized plate db
+        for data, var in zip(sessiontuple[:-1], varlist):
+            globals()[var] = data
+            print(var)
+            print(data, end="\n\n")
+        #start plate db readin
+        Plates.objects.all().delete()
+        for plate in serializers.deserialize("xml", sessiontuple[-1]):
+            plate.save()
+

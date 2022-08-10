@@ -1,0 +1,70 @@
+totaal = []
+Plate Layout
+
+check = ''
+Was the plate layout properly formatted?
+
+end_dilution = []
+Dilution Data
+
+dictionary = {}
+Key = Plate names, Value = OD, RGB Code
+
+HD = ''
+Healthy Donor Plate
+
+delete = []
+Plates that are excluded from calculations
+
+points_dictionary = {}
+Key = Plate names, Value = Upper/Lower points, linear part
+
+mean_ST_dictionary = {}
+Key = Plate names, Value = Avaraged OD's to make the graphs
+
+mean = 0
+Outlier mean <not really sure how this one works
+
+std = 0
+same as above but std
+
+mean2 = 0
+avg for cutoff
+
+std2 = 0
+std for cutoff
+
+check_cut_off = 'false'
+Has outliers (not cutoff?) been completed?
+
+cut_data = []
+OD scores of the healthy donor plate < still gotta check
+
+outlier_value = 0.0
+
+
+cut_off_value = 0.0
+
+
+end_result = {}
+
+
+lower = 0.0
+
+
+upper = 0.0
+
+
+intermediate_dictionary = {}
+
+
+params_dictionary = {}
+
+
+final_dictionary = {}
+
+
+final_list = []
+
+
+cut_off_value_au = 0
