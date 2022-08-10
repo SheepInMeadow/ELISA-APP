@@ -19,3 +19,11 @@ table {
 td, th {
     border: 1px solid grey;
 }
+
+.right_table {
+    margin-left: 50%;
+    margin-top: 20%;
+    font-size: 15pt;
+    font-family: "Arial", serif;
+
+}

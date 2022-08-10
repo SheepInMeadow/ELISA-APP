@@ -1,5 +1,4 @@
 import os
-
 from django.shortcuts import render
 from .models import Plates
 import openpyxl
@@ -11,11 +10,17 @@ import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
 import statistics
 from operator import itemgetter
+import xlrd
+import string
 import pickle
 from django.core import serializers
 from django.conf import settings
 from os.path import join
 from os import sep, listdir, remove
+
+#Make multithreading safe
+matplotlib.use('Agg')
+
 
 # Make multithreading safe
 matplotlib.use('Agg')
@@ -40,7 +45,10 @@ def reset_data():
     #set globals
     global totaal; totaal = []
     global check; check = ''
-    global end_dilution; end_dilution = []
+    global check2; check2 = ''
+    global dilution; dilution = []
+    global seprate_dilution; seprate_dilution = []
+    global end_dilution; end_dilution = [] #todo is this even used anymore?
     global dictionary; dictionary = {}
     global HD; HD = ''
     global delete; delete = []
@@ -62,6 +70,11 @@ def reset_data():
     global final_dictionary; final_dictionary = {}
     global final_list; final_list = []
     global cut_off_value_au; cut_off_value_au = 0
+    global unit_name; unit_name = ''
+    global row_standard; row_standard = ''
+    global column_standard; column_standard = ''
+    global elisa_type; elisa_type = ''
+    global cut_off_type; cut_off_type = ''
     #empty plates from db
     Plates.objects.all().delete()
     #empty pngs from images
@@ -136,7 +149,7 @@ def file_data(request):
         - 'file': A string that is used on the Input_data.html to show a specific error message.
         - 'extension': A string that is used on the Input_data.html to show a specific error message.
     Function:
-        - If there are no files selected but the user did click the submit button a string will be returned to
+        - If there are no files selected, but the user did click the submit button, a string will be returned to
           catch this error. If the user did submit files they are then checked on proper formatting, if not a string
           will be returned to catch this error. If these two checks are passed the files are then passed on to a
           corresponding function that handles the specific extension.
@@ -144,7 +157,7 @@ def file_data(request):
     if request.FILES.getlist('my_file') == []:
         return "file"
     for file in request.FILES.getlist('my_file'):
-        if str(file).split('.')[1] not in ['txt', 'xlsx']:
+        if str(file).split('.')[1] not in ['txt', 'xlsx', 'xls']:
             return 'extension'
     for file in request.FILES.getlist('my_file'):
         if str(file).split('.')[1] == 'txt':
@@ -153,6 +166,9 @@ def file_data(request):
             database(data_string, file)
         elif str(file).split('.')[1] == 'xlsx':
             data_string = formatting_xlsx(file)
+            database(data_string, file)
+        elif str(file).split('.')[1] == 'xls':
+            data_string = formatting_xls(file)
             database(data_string, file)
 
 
@@ -190,9 +206,9 @@ def formatting_xlsx(file_name):
     Output:
         - data_string: A formatted string with all values seperated by a special character.
     Function:
-        - Opens an excel workbook and reads in all the cells from a specific worksheet. By formatting all the rows
-          to the same length it can then be used to generate the data_string that is then returned to the file_data()
-          function.
+        - Opens an excel workbook and reads in all the cells from a specific worksheet.
+          It checks if the data is from a spectramax file and if so, sends it to the spectra_data function.
+          If not, the data is processed into the data_string and returned to the file_data() function
     """
     wb = openpyxl.load_workbook(file_name)
     active_sheet = wb.active
@@ -201,6 +217,79 @@ def formatting_xlsx(file_name):
         row_data = list()
         for cell in row:
             row_data.append(str(cell.value))
+        excel_data.append(row_data)
+    if excel_data[0][0] == "None":
+        data_string = spectra_data(excel_data, data_string)
+    else:
+        del excel_data[1][0]
+        del excel_data[0][1:]
+        excel_data[1].insert(0, '#')
+        for i in excel_data:
+            for j in i:
+                data_string += j + "="
+    return data_string
+
+
+def spectra_data(excel_data, data_string):
+    """
+        Input:
+            - excel_data: Nested list with all the rows from a submitted excel file.
+            - data_string: An empty string.
+        Output:
+            - data_string: Formatted string with all values seperated by a special character.
+        Function:
+            - Reads in the data from a nested list and adds an indentifier column and row.
+              The data is converted to data_string and returned to the function file_data().
+        """
+    for row in range(len(excel_data)):
+        del excel_data[row][0]
+    title = excel_data[0][0] + " " + excel_data[1][0]
+    del excel_data[0][0]
+    excel_data[0].insert(0, title)
+    top_row = list(range(len(excel_data[0])-1))
+    plus_one = [x + 1 for x in top_row]
+    top = [str(x) for x in plus_one]
+    top.insert(0, "#")
+    excel_data.insert(1, top)
+    alphabet_list = list(string.ascii_uppercase)
+    for row in range(len(excel_data[2:])):
+        del excel_data[2:][row][0]
+        excel_data[2:][row].insert(0, alphabet_list[row])
+    del excel_data[0][1:]
+    for i in excel_data:
+        for j in i:
+            data_string += j + "="
+    return data_string
+
+
+def formatting_xls(file_name):
+    """
+    Input:
+        - file_name: A string that contains the name of a specific file.
+    Output:
+        - data_string: Formatted string with all values seperated by a special character.
+    Function:
+        - Creates a dataframe an excel workbook and reads in all the cells from a specific worksheet.
+          It create a nested list from this data and processes thid data into the data_string.
+          It checks if the data is from a spectramax file and if so, sends it to the spectra_data function.
+          If not, the data is processed into the data_string and returned to the file_data() function.
+    """
+    excel_data, data_string = list(), ""
+    df = pd.read_excel(file_name)
+    df['Raw Data{Wavelength:415.0}'] = df['Raw Data{Wavelength:415.0}'].fillna('#')
+    first = df.columns.values.tolist()
+    df_list = df.values.tolist()
+    df_list.insert(0, first)
+    for row in df_list:
+        row_data = list()
+        for cell in row:
+            if row[0] == "#":
+                try:
+                    row_data.append(str(int(cell)))
+                except:
+                    row_data.append(str(cell))
+            else:
+                row_data.append(str(cell))
         excel_data.append(row_data)
     del excel_data[1][0]
     del excel_data[0][1:]
@@ -248,8 +337,13 @@ def Plate_layout(request):
           to bottom. If no button was pressed the template simply renders with only the file input field and submit
           button.
     """
-    global check, totaal
+    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name
     if request.method == 'POST':
+        elisa_type = request.POST.get('elisa_type')
+        cut_off_type = request.POST.get('cut-off_type')
+        if elisa_type == "1":
+            row_standard = request.POST.get('row_input')
+            column_standard = request.POST.get('column_input')
         if request.POST.get('file_submit'):
             totaal = []
             if request.FILES.getlist("my_file") == []:
@@ -257,7 +351,7 @@ def Plate_layout(request):
                 return render(request, 'Plate_layout.html', {
                     'check': check, 'totaal': totaal,
                 })
-            excel_data = Plate_layout_1(request)
+            excel_data = Plate_layout_1(request, "P")
             totaal = Plate_layout_2(excel_data)
             check = 'go'
             return render(request, 'Plate_layout.html', {
@@ -266,6 +360,7 @@ def Plate_layout(request):
             })
         if request.POST.get('standaard_input'):
             Plate_layout_3(request)
+            unit_name = request.POST.get('unit')
             check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal, 'check': check, })
@@ -274,7 +369,7 @@ def Plate_layout(request):
             'totaal': totaal, 'check': check, })
 
 
-def Plate_layout_1(request):
+def Plate_layout_1(request, check_type):
     """
     Input:
         - request: Catches submits from template.
@@ -284,7 +379,12 @@ def Plate_layout_1(request):
         - This function reads the submitted file and converts it to a nested list with all the data from that specific
           file. This nested list is then returned to the Plate_layout() function.
     """
-    excel_file = request.FILES["my_file"]
+    if check_type == 'P':
+        excel_file = request.FILES["my_file"]
+    elif check_type == 'D':
+        excel_file = request.FILES["dilution_file"]
+    elif check_type == 'D2':
+        excel_file = request.FILES["dilution_file2"]
     wb = openpyxl.load_workbook(excel_file)
     active_sheet = wb.active
     excel_data = list()
@@ -307,19 +407,35 @@ def Plate_layout_2(excel_data):
         - totaal: A nested list with the data from a plate layout file that is properly formatted and stripped of
           None's.
     Function:
-        - This function reads every line in the nested list excel_data and deletes all the None's then inserts values
-          so the lists have the same length. Finally it appends the formatted lists to the nested totaal list and
+        - This function reads every line in the nested list excel_data, determines the max rows per plate
+          and deletes all the None's then inserts values so the lists have the same length.
+          Finally it appends the formatted lists to the nested totaal list and
           returns this nested list to the Plate_layout() function.
     """
     temp, counter = [], 0
+    length_empty = 0
+    tot_rows = len(excel_data)
+    for x in range(len(excel_data)):
+        if x != 0:
+            if 'late ' in excel_data[x][0]:
+                rows = x-1
+                break
+            else:
+                rows = tot_rows
     for i in excel_data:
-        i = [e for e in i if e not in ('None')]
-        if len(i) != 0:
+        k = [e for e in i if e != ('None')]
+        if length_empty != 0 and len(k) != 0:
+            for g in range(length_empty):
+                if k[0].isalpha():
+                    if i[g] == 'None':
+                        k.insert(g, 'Empty')
+        if len(k) != 0:
             if counter == 1:
-                i.insert(0, '#')
-            temp.append(i)
+                k.insert(0, '#')
+                length_empty = len(k)
+            temp.append(k)
             counter += 1
-            if counter == 10:
+            if counter == rows:
                 totaal.append(temp)
                 counter = 0
                 temp = []
@@ -338,20 +454,21 @@ def Plate_layout_3(request):
           zero. When clicking the submit button the page gets reloaded and the table gets filled, so there is no return.
     """
     values = request.POST.get('standaard')
-    counter, counter2 = 0, 0
+    divide_number = request.POST.get('divide')
+    list_st = []
+    list_divide = []
     for i in totaal:
-        for j in i[2:]:
-            if counter2 != 7:
-                j[1] = float(values)
-                j[2] = float(values)
-                values = float(values) / 2
-            elif counter2 == 7:
-                j[1] = '#'
-                j[2] = '#'
-            counter2 += 1
-        counter += 1
-        values = request.POST.get('standaard')
-        counter2 = 0
+        for j in range(len(i)):
+            list_divide.append(values)
+            list_st.append('st_' + str(j+1))
+            values = float(values) / float(divide_number)
+        for j in range(len(i)):
+            for k in range(len(i[j])):
+                for d in range(len(i)):
+                    if i[j][k] == list_st[d]:
+                        i[j][k] = round(float(list_divide[d]), 3)
+                    elif i[j][k] == 'Blank':
+                        i[j][k] = "#"
 
 
 def Dilutions(request):
@@ -366,26 +483,64 @@ def Dilutions(request):
           The function Dilutions_1 is called and given multiple variables. The returned list is added to the nested
           list and returned to the template.
     """
-    global end_dilution
+    global dilution, check2, seprate_dilution
+    show = 'no'
     if request.method == 'POST':
-        if request.POST.get('dilution_submit'):
-            dilution = request.POST.get('dilution')
-            row_names = ["A", "B", "C", "D", "E", "F", "G", "H"]
-            end_list = [["#", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-                         "10", "11", "12"]]
-            for i in range(8):
-                temp = []
-                temp = Dilutions_1(i, temp, row_names, dilution)
-                end_list.append(temp)
-            end_dilution = end_list
+        if request.POST.get('file_submit'):
+            if request.FILES.getlist("dilution_file") == []:
+                check2 = 'error'
+                return render(request, 'Dilutions.html', {
+                    'check': check2, 'dilution': dilution,
+                    'show' : show,
+                })
+            dilution = []
+            seprate_dilution = []
+            excel_data = Plate_layout_1(request, 'D')
+            dilution = Dilutions_1(excel_data)
+            check2 = 'go'
+            if len(dilution) != len(totaal) and len(dilution) != 1:
+                check2 = 'nope'
             return render(request, 'Dilutions.html', {
-                "end_list": end_list
+                'dilution': dilution,
+                'check': check2,
+                'show': show,
             })
-    return render(request, 'Dilutions.html', {
-        "end_list": end_dilution})
+        if request.POST.get('plate_belong1'):
+            show = 'yes'
+            dilution_1 = request.POST.get('dilution_1')
+            dil_list = list(dilution_1.split(", "))
+            seprate_dilution.append(dil_list)
+            return render(request, 'Dilutions.html', {
+                'dilution': dilution,
+                'check': check2,
+                'dilution_v1' : dilution_1,
+                'show': show, })
+        if request.POST.get('file_submit2'):
+            if request.FILES.getlist("dilution_file2") == []:
+                check2 = 'error'
+                return render(request, 'Dilutions.html', {
+                    'check': check2, 'dilution': dilution,
+                    'show' : show,
+                })
+            excel_data = Plate_layout_1(request, 'D2')
+            dilution = Dilutions_1(excel_data)
+            check2 = 'go'
+            dilution_2 = request.POST.get('dilution_2')
+            dil_list = list(dilution_2.split(", "))
+            seprate_dilution.append(dil_list)
+            return render(request, 'Dilutions.html', {
+                'dilution': dilution,
+                'check': check2,
+                'show': show,
+            })
+    else:
+        return render(request, 'Dilutions.html', {
+            'dilution': dilution, 'check': check2,
+            'show' : show,})
 
 
-def Dilutions_1(i, temp, row_names, dilution):
+def Dilutions_1(excel_data):
+    global dilution
     """
     Input:
         - i: An integer which ranges from one to eight.
@@ -398,22 +553,34 @@ def Dilutions_1(i, temp, row_names, dilution):
         - The function decides which value gets added to the temp list. A total of 13 strings are added to the temp
           list.
     """
-    for x in range(13):
-        if i == 0:
-            if x == 0:
-                temp.append(row_names[i])
-            elif x == 1 or x == 2:
-                temp.append("1")
+    temp, counter = [], 0
+    length_empty = 0
+    tot_rows = len(excel_data)
+    for x in range(len(excel_data)):
+        if x != 0:
+            if 'late ' in excel_data[x][0]:
+                rows = x - 1
+                break
             else:
-                temp.append(dilution)
-        else:
-            if x == 0:
-                temp.append(row_names[i])
-            elif x == 1 or x == 2:
-                temp.append("1")
-            else:
-                temp.append(dilution)
-    return temp
+                rows = tot_rows
+    for i in excel_data:
+        k = [e for e in i if e != ('None')]
+        if length_empty != 0 and len(k) != 0:
+            for g in range(length_empty):
+                if k[0].isalpha():
+                    if i[g] == 'None':
+                        k.insert(g, 'Empty')
+        if len(k) != 0:
+            if counter == 1:
+                k.insert(0, '#')
+                length_empty = len(k)
+            temp.append(k)
+            counter += 1
+            if counter == rows:
+                dilution.append(temp)
+                counter = 0
+                temp = []
+    return dilution
 
 
 def Visualize_data(request):
@@ -466,17 +633,31 @@ def Visualize_data(request):
             number2 = lines[107].replace(',', '.')
             calculation = ((float(number1) + float(number2))/2)
             mean = round(calculation, 3)
-            for j in lines[1:]:
+            max = 0.0
+            new_lines = []
+            for k in lines[:14]:
+                new_lines.append(k)
+            for index, x in enumerate(lines[14:]):
+                if x.isdigit():
+                    x = str(float(x))
+                new_lines.append(x)
+            for x in new_lines[14:]:
+                if x[0].isdigit():
+                    if float(x) > max:
+                        max = float(x)
+            for j in new_lines[1:]:
                 if ',' in j:
                     new = float(j.replace(',', '.')) - mean
-                    c_color = 3 - new
-                    color = round(c_color)*85
+                    c_color = max - new
+                    times = 255/max
+                    color = c_color*times
                     DCO = round(new, 3)
                     temp.append([DCO, (color, 255, color)])
                 elif '.' in j:
                     new = float(j) - mean
-                    c_color = 3 - new
-                    color = round(c_color)*85
+                    c_color = max - new
+                    times = 255/max
+                    color = c_color*times
                     DCO = round(new, 3)
                     temp.append([DCO, (color, 255, color)])
                 else:
@@ -728,73 +909,104 @@ def Intermediate_result(request):
           than lower it gets a 1, if higher than upper it gets a 3. If nether than it gets a 2. When the list is filled
           it gets sorted by sample ID and everything gets put into one list.
     """
-    try:
-        global end_result
-        global lower
-        global upper
-        end_result = {}
-        for key, values in intermediate_dictionary.items():
-            if key not in delete:
-                end_result[key] = values
-        temp0 = []
-        temp1 = []
-        temp2 = []
-        temp3 = []
-        temp4 = []
-        for key, values in end_result.items():
-            mean_ST_dictionary[key].reverse()
-            top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
-            bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
-            string_top = formula2(top, *params_dictionary[key]) * int(end_dilution[3][3])
-            string_bot = formula2(bot, *params_dictionary[key]) * int(end_dilution[3][3])
-            for value in values:
-                if type(value[1]) == str:
-                    if len(value) == 2:
-                        if float(value[1]) < bot:
-                            temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + [1])
-                        else:
-                            temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + [3])
+    # try:
+    global end_result
+    global lower
+    global upper
+    end_result = {}
+    for key, values in intermediate_dictionary.items():
+        if key not in delete:
+            end_result[key] = values
+    temp0 = []
+    temp1 = []
+    temp2 = []
+    temp3 = []
+    temp4 = []
+    for key, values in end_result.items():
+        mean_ST_dictionary[key].reverse()
+        top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
+        bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
+        if len(seprate_dilution) != 0:
+            for sep in seprate_dilution[0]:
+                if sep in key:
+                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
+                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
+            for sep in seprate_dilution[1]:
+                if sep in key:
+                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
+                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
+        else:
+            for d in range(len(dilution)):
+                if dilution[d][0][0] in key:
+                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
+                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
+        for value in values:
+            if type(value[1]) == str:
+                if len(value) == 2:
+                    if float(value[1]) < bot:
+                        temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
                     else:
-                        value[2] = 1
-                        temp0.append(value)
-                elif int(value[1]) <= float(string_bot):
-                    if len(value) == 2:
-                        temp1.append(value + [1])
-                    else:
-                        value[2] = 1
-                        temp1.append(value)
-                elif int(value[1]) >= float(string_top):
-                    if len(value) == 2:
-                        temp3.append(value + [3])
-                    else:
-                        value[2] = 3
-                        temp3.append(value)
+                        temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
                 else:
-                    if len(value) == 2:
-                        temp2.append(value + [2])
-                    else:
-                        value[2] = 2
-                        temp2.append(value)
-            mean_ST_dictionary[key].reverse()
-        sorted_temp1 = sorted(temp1, key=itemgetter(1))
-        sorted_temp2 = sorted(temp2, key=itemgetter(1))
-        sorted_temp3 = sorted(temp3, key=itemgetter(1))
-        lower = sorted_temp2[0][1]
-        upper = sorted_temp2[-1][1]
-        complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
-        if request.method == 'POST':
-            if request.POST.get('limit_submit'):
-                lower = request.POST.get('lower')
-                upper = request.POST.get('upper')
-        return render(request, 'Intermediate_result.html', {
-            'complete_list': complete_list,
-        })
-    except:
-        return render(request, 'Error.html', {
-            'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
-                     'your preferences on the visualize Data page.'
-        })
-
+                    value[2] = 1
+                    temp0.append(value)
+            elif int(value[1]) <= float(string_bot):
+                if len(value) == 2:
+                    temp1.append(value + ['below'])
+                else:
+                    value[2] = 1
+                    temp1.append(value)
+            elif int(value[1]) >= float(string_top):
+                if len(value) == 2:
+                    temp3.append(value + ['above'])
+                else:
+                    value[2] = 3
+                    temp3.append(value)
+            else:
+                if len(value) == 2:
+                    temp2.append(value + ['linear'])
+                else:
+                    value[2] = 2
+                    temp2.append(value)
+        mean_ST_dictionary[key].reverse()
+    sorted_temp1 = sorted(temp1, key=itemgetter(1))
+    sorted_temp2 = sorted(temp2, key=itemgetter(1))
+    sorted_temp3 = sorted(temp3, key=itemgetter(1))
+    lower = sorted_temp2[0][1]
+    upper = sorted_temp2[-1][1]
+    complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
+    if len(sorted_temp1) < 20:
+        low_list = sorted_temp1 + sorted_temp2[:20]
+    else:
+        pos = len(sorted_temp1) - 20
+        low_list = sorted_temp1[pos:] + sorted_temp2[:20]
+    if len(sorted_temp2) < 20:
+        up_list = sorted_temp2 + sorted_temp3[:20]
+    else:
+        pos = len(sorted_temp2) - 20
+        up_list = sorted_temp2[pos:] + sorted_temp3[:20]
+    if request.method == 'POST':
+        if request.POST.get('limit_submit_l'):
+            lower = request.POST.get('lower')
+            return render(request, 'Intermediate_result.html', {
+                'complete_list': complete_list,
+                'unit': unit_name,
+                'limit_list': up_list,
+                'check': 'go_up'
+            })
+        if request.POST.get('limit_submit'):
+            upper = request.POST.get('upper')
+    return render(request, 'Intermediate_result.html', {
+        'complete_list': complete_list,
+        'unit': unit_name,
+        'limit_list' : low_list,
+        'check' : 'go_low'
+    })
+    # except:
+    #     return render(request, 'Error.html', {
+    #         'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
+    #                  'your preferences on the visualize Data page.'
+    #     })
 
 def intermediate_list(key, params):
     """
@@ -834,7 +1046,19 @@ def intermediate_list(key, params):
                             if np.isnan(result):
                                 result = str(j[values][value][0])
                             else:
-                                result *= int(dilution)
+                                if len(seprate_dilution) == 0:
+                                    if len(dilution) == 1:
+                                        result *= int(dilution[0][values + 1][value])
+                                    else:
+                                        for dil in range(len(dilution)):
+                                            if dilution[dil][0][0] in key:
+                                                result *= int(dilution[dil][values+1][value])
+                                else:
+                                    for d in range(len(seprate_dilution)):
+                                        for g in seprate_dilution[d]:
+                                            if g in key:
+                                                result *= int(dilution[d][values+1][value])
+
                                 result = round(result, 3)
                             list1.append([totaal[position][values + 1][value], result])
             intermediate_dictionary[i] = list1
@@ -871,73 +1095,91 @@ def End_results(request):
           is given an 1, if they are not met then the list gets an 0. After the list is filled and sorted
           the list is given to the render.
     """
-#    try:
-    global final_list
-    global cut_off_value_au
-    global final_dictionary
-    if request.method == 'POST':
-        if request.POST.get('Empty database'):
-            reset_data()
-        if request.POST.get('download'):
-            session_writeout()
-            """
-            file_name = request.POST.get('File_name')
-            textfile = open("../Download_files/" + file_name + ".txt", "w")
-            for elements in final_list:
-                for element in elements:
-                    textfile.write(str(element) + "\t")
-                textfile.write("\n")
-            textfile.close()
-            """
-        if request.POST.get('update_table'):
-            final_dictionary = {}
-            OD_multiplier = request.POST.get('OD_multiplier')
-            if len(end_result[HD][0]) == 2:
-                for keys, values in dictionary.items():
-                    if keys == HD:
-                        params = params_dictionary[HD]
-                        cut_off_value_au = formula2(float(cut_off_value), *params) * int(end_dilution[3][3])
-                    if keys not in delete:
-                        counter = 0
-                        for OD_list in values[1:]:
-                            for OD in OD_list[3:]:
-                                end_result[keys][counter].append(OD[0])
-                                counter += 1
-            sampleID = 1
-            final_list = []
-            for keys, values in end_result.items():
-                if keys != HD:
-                    counter = 0
-                    counter2 = 0
-                    for elements in values:
-                        if counter < 5:
-                            if float(elements[1]) >= float(lower):
-                                if elements[1] >= float(cut_off_value_au):
-                                    if (values[counter2][2]) / (values[counter2 + 5][2]) >= int(OD_multiplier):
-                                        final_dictionary[sampleID] = [elements[0], 1, round(elements[1])]
-                            if sampleID not in final_dictionary:
-                                if float(elements[1]) < float(lower):
-                                    final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower)]
-                                else:
-                                    final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1]))]
-                            sampleID += 1
-                        counter += 1
-                        counter2 += 1
-                        if counter == 10:
+    try:
+        global final_list
+        global cut_off_value_au
+        global final_dictionary
+        if request.method == 'POST':
+            if request.POST.get('Empty database'):
+                reset_data()
+            if request.POST.get('download'):
+                file_name = request.POST.get('File_name')
+                textfile = open("../Download_files/" + file_name + ".txt", "w")
+                for elements in final_list:
+                    for element in elements:
+                        textfile.write(str(element) + "\t")
+                    textfile.write("\n")
+                textfile.close()
+            if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
+                    request.POST.get('update_table_S'):
+                final_dictionary = {}
+                OD_multiplier = request.POST.get('OD_multiplier')
+                if len(end_result[HD][0]) == 2:
+                    for keys, values in dictionary.items():
+                        if keys == HD:
+                            params = params_dictionary[HD]
+                            cut_off_value_au = formula2(float(cut_off_value), *params) * int(dilution[0][3][3])
+                        if keys not in delete:
                             counter = 0
-            for i, lists in final_dictionary.items():
-                final_list.append(lists)
-            final_list = sorted(final_list, key=itemgetter(0))
-    return render(request, 'End_results.html', {
-        'final_list': final_list,
-        'lower': lower,
-        'cut_off_value': round(cut_off_value_au),
-    })
-#    except:
-#        return render(request, 'Error.html', {
-#            'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
-#        })
-
+                            for OD_list in values[1:]:
+                                for OD in OD_list[3:]:
+                                    end_result[keys][counter].append(OD[0])
+                                    counter += 1
+                sampleID = 1
+                final_list = []
+                for keys, values in end_result.items():
+                    if keys != HD:
+                        counter = 0
+                        counter2 = 0
+                        for elements in values:
+                            if elements[0] != 'Empty':
+                                if counter < 5:
+                                    if float(elements[1]) >= float(lower):
+                                        if elements[1] >= float(cut_off_value_au):
+                                            if request.POST.get('update_table_M'):
+                                                if (values[counter2][2]) / (values[counter2 + 5][2]) >= int(
+                                                        OD_multiplier):
+                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]),
+                                                                                  values[counter2][2],
+                                                                                  values[counter2 + 5][2]]
+                                            elif request.POST.get('update_table_H'):
+                                                OD_multiplier = request.POST.get('OD_higher')
+                                                if (values[counter2][2]) - (values[counter2 + 5][2]) >= int(
+                                                        OD_multiplier):
+                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]),
+                                                                                  values[counter2][2],
+                                                                                  values[counter2 + 5][2]]
+                                            elif request.POST.get('update_table_S'):
+                                                OD_multiplier = request.POST.get('reference')
+                                                if (round(elements[1])) >= int(OD_multiplier):
+                                                    final_dictionary[sampleID] = [elements[0], 1, round(elements[1]),
+                                                                                  values[counter2][2],
+                                                                                  values[counter2 + 5][2]]
+                                    if sampleID not in final_dictionary:
+                                        if float(elements[1]) < float(lower):
+                                            final_dictionary[sampleID] = [elements[0], 0, '<' + str(lower),
+                                                                          values[counter2][2], values[counter2 + 5][2]]
+                                        else:
+                                            final_dictionary[sampleID] = [elements[0], 0, round(float(elements[1])),
+                                                                          values[counter2][2], values[counter2 + 5][2]]
+                                sampleID += 1
+                            counter += 1
+                            counter2 += 1
+                            if counter == 10:
+                                counter = 0
+                    for i, lists in final_dictionary.items():
+                        final_list.append(lists)
+                    final_list = sorted(final_list, key=itemgetter(0))
+                    return render(request, 'End_results.html', {
+                        'final_list': final_list,
+                        'lower': lower,
+                        'cut_off_value': round(cut_off_value_au),
+                        'unit': unit_name,
+                    })
+    except:
+        return render(request, 'Error.html', {
+            'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
+        })
 
 def session_writeout(session_name): #Note: current pickle version = 4, supported from py 3.4 and default from py 3.8
     session_name += ".ELISA_App"
