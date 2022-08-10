@@ -16,30 +16,12 @@ import pickle
 from django.core import serializers
 from django.conf import settings
 from os.path import join
-from os import sep, listdir, remove
-
-#Make multithreading safe
-matplotlib.use('Agg')
-
-
+from os import sep, listdir
 # Make multithreading safe
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-#autosave = True #could just call a writeout with every url call but, the only way to do that cleanly is with middleware and that's effort
-
-# session = {totaal : [], 'check' : '', 'end_dilution' : [], 'dictionary' : {},             for perhaps use in database
-#            'HD' : '', 'delete' : [], 'points_dictionary' : {},
-#            'mean_ST_dictionary' : {}, 'mean' : 0, 'std' : 0, 'mean2' : 0,
-#            'std2' : 0, 'check_cut_off' : 'false', 'cut_data' : [],
-#            'outlier_value' : 0.0, 'cut_off_value' : 0.0, 'end_result' : {},
-#            'lower' : 0.0, 'upper' : 0.0, 'intermediate_dictionary' : {},
-#            'params_dictionary' : {}, 'final_dictionary' : {},
-#            'final_list' : [], 'cut_off_value_au' : 0}
-
-def get_mediapath(extension=''):
-    mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
-    return mediapath
+version_number = 1.1
 
 def reset_data():
     #set globals
@@ -83,6 +65,9 @@ def reset_data():
             os.remove(get_mediapath(file))
     return
 
+def get_mediapath(extension=''):
+    mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
+    return mediapath
 
 def Home(request):
     """
@@ -98,7 +83,9 @@ def Home(request):
             session_writeout("Manual Session")
         elif request.POST.get('submit_pickle'):
             session_readin(request.FILES['my_pickle'])
-    return render(request, 'Home.html')
+    return render(request, 'Home.html', {
+            'version': version_number,
+        })
 
 
 def Input_data(request):
@@ -109,7 +96,7 @@ def Input_data(request):
         -
     Function:
         - Checks if the user clicked the button to empty the database and then renders the page with a message
-          indicating that it was succesfullly emptied. Then checks for if there were any files submitted, if so it will
+          indicating that it was successfullly emptied. Then checks for if there were any files submitted, if so it will
           send the data to the file_data() function. The variable error is then used to determine if the submitted files
           were incorrectly formatted and shows the corresponding error on the page. If all is ok the page renders with
           a message to inform the user of this. If any other error occurs which is not properly caught, the page will
@@ -909,104 +896,104 @@ def Intermediate_result(request):
           than lower it gets a 1, if higher than upper it gets a 3. If nether than it gets a 2. When the list is filled
           it gets sorted by sample ID and everything gets put into one list.
     """
-    # try:
-    global end_result
-    global lower
-    global upper
-    end_result = {}
-    for key, values in intermediate_dictionary.items():
-        if key not in delete:
-            end_result[key] = values
-    temp0 = []
-    temp1 = []
-    temp2 = []
-    temp3 = []
-    temp4 = []
-    for key, values in end_result.items():
-        mean_ST_dictionary[key].reverse()
-        top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
-        bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
-        if len(seprate_dilution) != 0:
-            for sep in seprate_dilution[0]:
-                if sep in key:
-                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
-                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
-            for sep in seprate_dilution[1]:
-                if sep in key:
-                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
-                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
-        else:
-            for d in range(len(dilution)):
-                if dilution[d][0][0] in key:
-                    string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
-                    string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
-        for value in values:
-            if type(value[1]) == str:
-                if len(value) == 2:
-                    if float(value[1]) < bot:
-                        temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
-                    else:
-                        temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
-                else:
-                    value[2] = 1
-                    temp0.append(value)
-            elif int(value[1]) <= float(string_bot):
-                if len(value) == 2:
-                    temp1.append(value + ['below'])
-                else:
-                    value[2] = 1
-                    temp1.append(value)
-            elif int(value[1]) >= float(string_top):
-                if len(value) == 2:
-                    temp3.append(value + ['above'])
-                else:
-                    value[2] = 3
-                    temp3.append(value)
+    try:
+        global end_result
+        global lower
+        global upper
+        end_result = {}
+        for key, values in intermediate_dictionary.items():
+            if key not in delete:
+                end_result[key] = values
+        temp0 = []
+        temp1 = []
+        temp2 = []
+        temp3 = []
+        temp4 = []
+        for key, values in end_result.items():
+            mean_ST_dictionary[key].reverse()
+            top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
+            bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
+            if len(seprate_dilution) != 0:
+                for sep in seprate_dilution[0]:
+                    if sep in key:
+                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
+                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
+                for sep in seprate_dilution[1]:
+                    if sep in key:
+                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
+                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
             else:
-                if len(value) == 2:
-                    temp2.append(value + ['linear'])
+                for d in range(len(dilution)):
+                    if dilution[d][0][0] in key:
+                        string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
+                        string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
+            for value in values:
+                if type(value[1]) == str:
+                    if len(value) == 2:
+                        if float(value[1]) < bot:
+                            temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
+                        else:
+                            temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
+                    else:
+                        value[2] = 1
+                        temp0.append(value)
+                elif int(value[1]) <= float(string_bot):
+                    if len(value) == 2:
+                        temp1.append(value + ['below'])
+                    else:
+                        value[2] = 1
+                        temp1.append(value)
+                elif int(value[1]) >= float(string_top):
+                    if len(value) == 2:
+                        temp3.append(value + ['above'])
+                    else:
+                        value[2] = 3
+                        temp3.append(value)
                 else:
-                    value[2] = 2
-                    temp2.append(value)
-        mean_ST_dictionary[key].reverse()
-    sorted_temp1 = sorted(temp1, key=itemgetter(1))
-    sorted_temp2 = sorted(temp2, key=itemgetter(1))
-    sorted_temp3 = sorted(temp3, key=itemgetter(1))
-    lower = sorted_temp2[0][1]
-    upper = sorted_temp2[-1][1]
-    complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
-    if len(sorted_temp1) < 20:
-        low_list = sorted_temp1 + sorted_temp2[:20]
-    else:
-        pos = len(sorted_temp1) - 20
-        low_list = sorted_temp1[pos:] + sorted_temp2[:20]
-    if len(sorted_temp2) < 20:
-        up_list = sorted_temp2 + sorted_temp3[:20]
-    else:
-        pos = len(sorted_temp2) - 20
-        up_list = sorted_temp2[pos:] + sorted_temp3[:20]
-    if request.method == 'POST':
-        if request.POST.get('limit_submit_l'):
-            lower = request.POST.get('lower')
-            return render(request, 'Intermediate_result.html', {
-                'complete_list': complete_list,
-                'unit': unit_name,
-                'limit_list': up_list,
-                'check': 'go_up'
-            })
-        if request.POST.get('limit_submit'):
-            upper = request.POST.get('upper')
-    return render(request, 'Intermediate_result.html', {
-        'complete_list': complete_list,
-        'unit': unit_name,
-        'limit_list' : low_list,
-        'check' : 'go_low'
-    })
-    # except:
-    #     return render(request, 'Error.html', {
-    #         'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
-    #                  'your preferences on the visualize Data page.'
-    #     })
+                    if len(value) == 2:
+                        temp2.append(value + ['linear'])
+                    else:
+                        value[2] = 2
+                        temp2.append(value)
+            mean_ST_dictionary[key].reverse()
+        sorted_temp1 = sorted(temp1, key=itemgetter(1))
+        sorted_temp2 = sorted(temp2, key=itemgetter(1))
+        sorted_temp3 = sorted(temp3, key=itemgetter(1))
+        lower = sorted_temp2[0][1]
+        upper = sorted_temp2[-1][1]
+        complete_list = temp0 + sorted_temp1 + sorted_temp2 + sorted_temp3 + temp4
+        if len(sorted_temp1) < 20:
+            low_list = sorted_temp1 + sorted_temp2[:20]
+        else:
+            pos = len(sorted_temp1) - 20
+            low_list = sorted_temp1[pos:] + sorted_temp2[:20]
+        if len(sorted_temp2) < 20:
+            up_list = sorted_temp2 + sorted_temp3[:20]
+        else:
+            pos = len(sorted_temp2) - 20
+            up_list = sorted_temp2[pos:] + sorted_temp3[:20]
+        if request.method == 'POST':
+            if request.POST.get('limit_submit_l'):
+                lower = request.POST.get('lower')
+                return render(request, 'Intermediate_result.html', {
+                    'complete_list': complete_list,
+                    'unit': unit_name,
+                    'limit_list': up_list,
+                    'check': 'go_up'
+                })
+            if request.POST.get('limit_submit'):
+                upper = request.POST.get('upper')
+        return render(request, 'Intermediate_result.html', {
+            'complete_list': complete_list,
+            'unit': unit_name,
+            'limit_list' : low_list,
+            'check' : 'go_low'
+        })
+    except:
+        return render(request, 'Error.html', {
+            'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
+                     'your preferences on the visualize Data page.'
+        })
 
 def intermediate_list(key, params):
     """
@@ -1188,7 +1175,7 @@ def session_writeout(session_name): #Note: current pickle version = 4, supported
                      std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
                      intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au,
                      serializers.serialize("xml", Plates.objects.all())), f, protocol=4) #Plates.objects is serialized to xml, preventing upgrading issues with Django
-        print("pickle succes")
+        print("pickle success")
 
 
 def session_readin(session):
