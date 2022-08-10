@@ -31,7 +31,6 @@ totaal = []
 check = ''
 check2 = ''
 dilution = []
-seprate_dilution = []
 dictionary = {}
 HD = ''
 delete = []
@@ -53,13 +52,17 @@ params_dictionary = {}
 final_dictionary = {}
 final_list = []
 cut_off_value_au = 0
-unit_name = ''
 
 #new globals
+seprate_dilution = []
 row_standard = ''
+unit_name = ''
 column_standard = ''
+divide_number = 0
 elisa_type = ''
 cut_off_type = ''
+st_finder = []
+dict_st = {}
 
 
 def Home(request):
@@ -421,25 +424,32 @@ def Plate_layout_3(request):
     Input:
         - request: Catches submits from template.
     Output:
-        -
+        - divide_number: in this varibale comes a divide number the user submitted
     Function:
         - This function retrieves the submitted ST value the user inputted. This value is then used and divided by two
           for every row in the plate layout file. The last row get a # as value since these values are supposed to be
           zero. When clicking the submit button the page gets reloaded and the table gets filled, so there is no return.
     """
+    global divide_number, st_finder, dict_st
     values = request.POST.get('standaard')
     divide_number = request.POST.get('divide')
     list_st = []
     list_divide = []
-    for i in totaal:
+    dict_st = {}
+    for index, i in enumerate(totaal):
         for j in range(len(i)):
             list_divide.append(values)
             list_st.append('st_' + str(j+1))
+            if 'st_' + str(j+1) not in dict_st:
+                dict_st['st_' + str(j+1)] = []
             values = float(values) / float(divide_number)
         for j in range(len(i)):
             for k in range(len(i[j])):
                 for d in range(len(i)):
                     if i[j][k] == list_st[d]:
+                        dict_st[i[j][k]].append([index, j, k])
+                        if index == 0 and i[j][k] == 'st_1':
+                            st_finder = [0, j, k]
                         i[j][k] = round(float(list_divide[d]), 3)
                     elif i[j][k] == 'Blank':
                         i[j][k] = "#"
@@ -612,13 +622,14 @@ def Visualize_data(request):
             mean = round(calculation, 3)
             max = 0.0
             new_lines = []
-            for k in lines[:14]:
+            position = lines.index("A")
+            for k in lines[:position]:
                 new_lines.append(k)
-            for index, x in enumerate(lines[14:]):
+            for index, x in enumerate(lines[position:]):
                 if x.isdigit():
                     x = str(float(x))
                 new_lines.append(x)
-            for x in new_lines[14:]:
+            for x in new_lines[position:]:
                 if x[0].isdigit():
                     if float(x) > max:
                         max = float(x)
@@ -671,20 +682,28 @@ def create_graph(dictionary):
           value consists of a list calculated average ST values of each row. This data is then used to create each
           graph.
     """
-    conc = totaal[0][2][1]
+    global mean_ST_dictionary
+    conc = totaal[st_finder[0]][st_finder[1]][st_finder[2]]
     x_list = [conc]
     for i in range(6):
-        conc = float(conc)/2
+        conc = float(conc)/int(divide_number)
         x_list.append(conc)
     y_list = []
     temp = []
+    count_plate = 0
     for values in dictionary.values():
-        for elements in values[1:-1]:
-            mean = ((float(elements[1][0]) + float(elements[2][0]))/2)
-            temp.append(round(mean, 3))
+        for elements in dict_st.values():
+            if len(elements) != 0:
+                pos1 = elements[count_plate][1]
+                pos2 = elements[count_plate][2]
+                pos3 = elements[count_plate+1][1]
+                pos4 = elements[count_plate+1][2]
+                mean = ((float(values[pos1-1][pos2][0]) + float(values[pos3-1][pos4][0]))/2)
+                temp.append(round(mean, 3))
+        count_plate += 2
+        temp.pop()
         y_list.append(temp)
         temp = []
-    global mean_ST_dictionary
     counter = 0
     for keys in dictionary:
         mean_ST_dictionary[keys] = y_list[counter]
@@ -754,103 +773,121 @@ def Cut_off(request):
          Then it will create the swarm plot for te cut-ff. If the button from cut_off_submit was pressed a cut-off is
          calculated.
     """
-    try:
-        global mean
-        global std
-        global mean2
-        global std2
-        global cut_data
-        global check_cut_off
-        global outlier_value
-        global cut_off_value
-        global elisa_type
-        cut_dict = {}
-        if cut_off_type == '2':
-            return render(request, 'Error.html', {
-                'error': 'In plate layout was selected to not use HD for cutoff. Go to intermediate result to continue'
-                         ' the application'
-            })
-        if request.method == 'POST':
-            if request.POST.get('outlier_submit'):
-                input1 = request.POST.get('input1')
-                input2 = request.POST.get('input2')
-                outlier_value = (float(input1) * mean) + (float(input2) * std)
-                outlier_value = round(outlier_value, 3)
-                new_y_list = []
-                for data in cut_data:
-                    if data < outlier_value:
-                        new_y_list.append(data)
-                cut_dict['New_OD'] = new_y_list
-                mean2 = round(statistics.mean(new_y_list), 3)
-                std2 = round(statistics.stdev(new_y_list), 3)
-                df = pd.DataFrame(data=cut_dict)
-                ax = sns.swarmplot(data=df, y="New_OD")
-                ax = sns.boxplot(data=df, y="New_OD", color='white')
-                plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')
-                plt.close()
-                check_cut_off = 'true'
-                return render(request, 'Cut_off.html', {
-                    'mean': mean,
-                    'std': std,
-                    'mean2': mean2,
-                    'std2': std2,
-                    'check': check_cut_off,
-                    'outlier_value': outlier_value,
-                    'cut_off_value': cut_off_value,
-                })
-            elif request.POST.get('cut_off_submit'):
-                input3 = request.POST.get('input3')
-                input4 = request.POST.get('input4')
-                cut_off_value = (float(input3) * mean2) + (float(input4) * std2)
-                cut_off_value = round(cut_off_value, 3)
-                return render(request, 'Cut_off.html', {
-                    'mean': mean,
-                    'std': std,
-                    'mean2': mean2,
-                    'std2': std2,
-                    'check': check_cut_off,
-                    'outlier_value': outlier_value,
-                    'cut_off_value': cut_off_value,
-                })
-        elif cut_data == []:
-            if elisa_type == '1':
-                for i in dictionary[HD][1:]:
-                    for g in i[3:8]:
-                        cut_data.append(g[0])
-            elif elisa_type == '2':
-                for i in dictionary[HD][1:]:
-                    for g in i[3:]:
-                        cut_data.append(g[0])
-            cut_data.pop(0)
-            cut_dict["OD"] = cut_data
-            mean = round(statistics.mean(cut_data), 3)
-            std = round(statistics.stdev(cut_data), 3)
+    #try:
+    global mean
+    global std
+    global mean2
+    global std2
+    global cut_data
+    global check_cut_off
+    global outlier_value
+    global cut_off_value
+    global elisa_type
+    cut_dict = {}
+    if cut_off_type == '2':
+        return render(request, 'Error.html', {
+            'error': 'In plate layout was selected to not use HD for cutoff. Go to intermediate result to continue'
+                     ' the application'
+        })
+    if request.method == 'POST':
+        if request.POST.get('outlier_submit'):
+            input1 = request.POST.get('input1')
+            input2 = request.POST.get('input2')
+            outlier_value = (float(input1) * mean) + (float(input2) * std)
+            outlier_value = round(outlier_value, 3)
+            new_y_list = []
+            for data in cut_data:
+                if data < outlier_value:
+                    new_y_list.append(data)
+            cut_dict['New_OD'] = new_y_list
+            mean2 = round(statistics.mean(new_y_list), 3)
+            std2 = round(statistics.stdev(new_y_list), 3)
             df = pd.DataFrame(data=cut_dict)
-            ax = sns.swarmplot(data=df, y="OD")
-            ax = sns.boxplot(data=df, y="OD", color='white')
-            plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')
+            ax = sns.swarmplot(data=df, y="New_OD")
+            ax = sns.boxplot(data=df, y="New_OD", color='white')
+            plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')
             plt.close()
+            check_cut_off = 'true'
             return render(request, 'Cut_off.html', {
                 'mean': mean,
                 'std': std,
+                'mean2': mean2,
+                'std2': std2,
                 'check': check_cut_off,
                 'outlier_value': outlier_value,
                 'cut_off_value': cut_off_value,
             })
+        elif request.POST.get('cut_off_submit'):
+            input3 = request.POST.get('input3')
+            input4 = request.POST.get('input4')
+            cut_off_value = (float(input3) * mean2) + (float(input4) * std2)
+            cut_off_value = round(cut_off_value, 3)
+            return render(request, 'Cut_off.html', {
+                'mean': mean,
+                'std': std,
+                'mean2': mean2,
+                'std2': std2,
+                'check': check_cut_off,
+                'outlier_value': outlier_value,
+                'cut_off_value': cut_off_value,
+            })
+    elif cut_data == []:
+        if elisa_type == '1':
+            count_plate = 0
+            count_plate2 = 0
+            for i, j in dictionary.items():
+                if HD == i:
+                    for values in range(len(j)):
+                        for value in range(len(j[values])):
+                            check = 'yes'
+                            for elements in dict_st.values():
+                                if len(elements) != 0:
+                                    if elements[count_plate][0] == count_plate2:
+                                        pos1 = elements[count_plate][1]
+                                        pos2 = elements[count_plate][2]
+                                        if j[pos1-1][pos2] == j[values][value]:
+                                            check = 'no'
+                            if check == 'yes':
+                                if type(j[values][value][0]) != str and value <= 7:
+                                    cut_data.append(j[values][value][0])
+                # for g in i[3:8]:
+                #     cut_data.append(g[0])
+                count_plate += 2
+                count_plate2 += 1
+        elif elisa_type == '2':
+            for i in dictionary[HD][1:]:
+                for g in i[3:]:
+                    cut_data.append(g[0])
+        cut_data.pop(0)
+        cut_dict["OD"] = cut_data
+        mean = round(statistics.mean(cut_data), 3)
+        std = round(statistics.stdev(cut_data), 3)
+        df = pd.DataFrame(data=cut_dict)
+        ax = sns.swarmplot(data=df, y="OD")
+        ax = sns.boxplot(data=df, y="OD", color='white')
+        plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')
+        plt.close()
         return render(request, 'Cut_off.html', {
             'mean': mean,
             'std': std,
-            'mean2': mean2,
-            'std2': std2,
             'check': check_cut_off,
             'outlier_value': outlier_value,
             'cut_off_value': cut_off_value,
         })
-    except:
-        return render(request, 'Error.html', {
-            'error': 'An error occurred, please be sure to select the plate with the healthy donor data on the '
-                     'Visualize data page.'
-        })
+    return render(request, 'Cut_off.html', {
+        'mean': mean,
+        'std': std,
+        'mean2': mean2,
+        'std2': std2,
+        'check': check_cut_off,
+        'outlier_value': outlier_value,
+        'cut_off_value': cut_off_value,
+    })
+    # except:
+    #     return render(request, 'Error.html', {
+    #         'error': 'An error occurred, please be sure to select the plate with the healthy donor data on the '
+    #                  'Visualize data page.'
+    #     })
 
 
 def formula2(y, A, B, C, D, E):
@@ -1034,33 +1071,42 @@ def intermediate_list(key, params):
         if num1 == num2:
             position = options
     list1 = []
+    count_plate = 0
     for i, j in dictionary.items():
         if i == key:
+            for elements in dict_st.values():
+                if len(elements) != 0:
+                    pos1 = elements[count_plate][1]
+                    pos2 = elements[count_plate][2]
+                    pos3 = elements[count_plate + 1][1]
+                    pos4 = elements[count_plate + 1][2]
+            count_plate += 2
             params_dictionary[key] = params
             for values in range(len(j)):
                 if values != 0:
                     for value in range(len(j[values])):
-                        if value != 0 and value != 1 and value != 2:
-                            result = formula2(j[values][value][0], *params)
-                            if np.isnan(result):
-                                result = str(j[values][value][0])
-                            else:
-                                if len(seprate_dilution) == 0:
-                                    if len(dilution) == 1:
-                                        result *= int(dilution[0][values + 1][value])
-                                    else:
-                                        for dil in range(len(dilution)):
-                                            if dilution[dil][0][0] in key:
-                                                result *= int(dilution[dil][values+1][value])
+                        if value != 0:
+                            if value != pos2 and values != pos1 or value != pos4 and values != pos3:
+                                result = formula2(j[values][value][0], *params)
+                                if np.isnan(result):
+                                    result = str(j[values][value][0])
                                 else:
-                                    for d in range(len(seprate_dilution)):
-                                        for g in seprate_dilution[d]:
-                                            if g in key:
-                                                result *= int(dilution[d][values+1][value])
+                                    if len(seprate_dilution) == 0:
+                                        if len(dilution) == 1:
+                                            result *= int(dilution[0][values + 1][value])
+                                        else:
+                                            for dil in range(len(dilution)):
+                                                if dilution[dil][0][0] in key:
+                                                    result *= int(dilution[dil][values+1][value])
+                                    else:
+                                        for d in range(len(seprate_dilution)):
+                                            for g in seprate_dilution[d]:
+                                                if g in key:
+                                                    result *= int(dilution[d][values+1][value])
 
-                                result = round(result, 3)
-                            list1.append([totaal[position][values + 1][value], result])
-            intermediate_dictionary[i] = list1
+                                    result = round(result, 3)
+                                list1.append([totaal[position][values + 1][value], result])
+                intermediate_dictionary[i] = list1
 
 
 def End_results(request):
