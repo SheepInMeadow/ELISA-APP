@@ -30,7 +30,7 @@ def reset_data():
     global check2; check2 = ''
     global dilution; dilution = []
     global seprate_dilution; seprate_dilution = []
-    global end_dilution; end_dilution = [] #todo is this even used anymore?
+    global end_dilution; end_dilution = [] #is this even used anymore? -no, no it's not
     global dictionary; dictionary = {}
     global HD; HD = ''
     global delete; delete = []
@@ -1166,31 +1166,35 @@ def End_results(request):
             'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
         })
 
-def session_writeout(session_name): #Note: current pickle version = 4, supported from py 3.4 and default from py 3.8
+
+def session_writeout(session_name):  # Note: currently used pickle version = 4, supported from py 3.4 and default from py 3.8
     session_name += ".ELISA_App"
     with open(session_name, 'wb') as f:
-        pickle.dump((totaal, check, end_dilution, dictionary, HD, delete, points_dictionary, mean_ST_dictionary, mean,
+        pickle.dump((totaal, check, check2, dilution, seprate_dilution, end_dilution, dictionary, HD, delete,
+                     points_dictionary, mean_ST_dictionary, mean,
                      std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
                      intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au,
-                     serializers.serialize("xml", Plates.objects.all())), f, protocol=4) #Plates.objects is serialized to xml, preventing upgrading issues with Django
+                     unit_name, row_standard, column_standard, elisa_type, cut_off_type,
+                     serializers.serialize("xml", Plates.objects.all())), f, protocol=4)  # Plates.objects is serialized to xml, preventing upgrading issues with Django
         print("pickle success")
 
 
 def session_readin(session):
     varlist = (
-    "totaal", "check", "end_dilution", "dictionary", "HD", "delete", "points_dictionary", "mean_ST_dictionary", "mean",
-    "std", "mean2", "std2", "check_cut_off", "cut_data", "outlier_value", "cut_off_value", "end_result", "lower",
-    "upper", "intermediate_dictionary", "params_dictionary", "final_dictionary", "final_list", "cut_off_value_au")
+        "totaal", "check", "check2", "dilution", "seprate_dilution", "end_dilution", "dictionary", "HD", "delete",
+        "points_dictionary", "mean_ST_dictionary", "mean",
+        "std", "mean2", "std2", "check_cut_off", "cut_data", "outlier_value", "cut_off_value", "end_result", "lower",
+        "upper", "intermediate_dictionary", "params_dictionary", "final_dictionary", "final_list", "cut_off_value_au",
+        "unit_name", "row_standard", "column_standard", "elisa_type", "cut_off_type")
 
     with session as f:
         sessiontuple = pickle.load(f)
-        #[:-1] to exclude serialized plate db
+        # [:-1] to exclude serialized plate db
         for data, var in zip(sessiontuple[:-1], varlist):
             globals()[var] = data
             print(var)
             print(data, end="\n\n")
-        #start plate db readin
+        # start plate db readin
         Plates.objects.all().delete()
         for plate in serializers.deserialize("xml", sessiontuple[-1]):
             plate.save()
-
