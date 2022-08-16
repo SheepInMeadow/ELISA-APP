@@ -1,4 +1,3 @@
-import os
 from django.shortcuts import render
 from .models import Plates
 import openpyxl
@@ -10,14 +9,15 @@ import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
 import statistics
 from operator import itemgetter
-import xlrd
 import string
 import pickle
 from django.core import serializers
 from django.conf import settings
 from os.path import join
-from os import sep, listdir
+from os import sep, listdir, mkdir, remove
 from copy import deepcopy
+import datetime
+import shutil
 # Make multithreading safe
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -63,7 +63,7 @@ def reset_data():
     #empty pngs from images
     for file in listdir(get_mediapath()):
         if file.endswith('.png'):
-            os.remove(get_mediapath(file))
+            remove(get_mediapath(file))
     return
 
 def get_mediapath(extension=''):
@@ -1104,13 +1104,7 @@ def End_results(request):
             if request.POST.get('Empty database'):
                 reset_data()
             if request.POST.get('download'):
-                file_name = request.POST.get('File_name')
-                textfile = open("../Download_files/" + file_name + ".txt", "w")
-                for elements in final_list:
-                    for element in elements:
-                        textfile.write(str(element) + "\t")
-                    textfile.write("\n")
-                textfile.close()
+                report_writeout()
             if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
                     request.POST.get('update_table_S') or request.POST.get('update_table_No'):
                 final_dictionary = {}
@@ -1198,7 +1192,7 @@ def End_results(request):
             'elisa_type': elisa_type,
             'cut_off_type': cut_off_type,
         })
-    except:
+    except KeyboardInterrupt:
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
         })
@@ -1214,6 +1208,7 @@ def session_writeout(session_name):  # Note: currently used pickle version = 4, 
                      unit_name, row_standard, column_standard, elisa_type, cut_off_type,
                      serializers.serialize("xml", Plates.objects.all())), f, protocol=4)  # Plates.objects is serialized to xml, preventing upgrading issues with Django
         print("pickle success")
+        f.close()
 
 
 def session_readin(session):
@@ -1235,3 +1230,34 @@ def session_readin(session):
         Plates.objects.all().delete()
         for plate in serializers.deserialize("xml", sessiontuple[-1]):
             plate.save()
+
+def report_writeout():
+    #Create directory, checking for uniqueness
+    dirpath = datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M")
+    unique, iterations = False, 1
+    while not unique:
+        try:
+            print("Saving report to:", dirpath)
+            mkdir(dirpath)
+            unique = True
+        except FileExistsError:
+            print("FileExistsError raised")
+            iterations += 1
+            dirpath = (dirpath.split(" (")[0] + f" ({iterations})")
+
+    #Save images
+    for file in listdir(get_mediapath()):
+        if file.endswith('.png'):
+            shutil.copy2(get_mediapath(file), dirpath)
+
+    #Save end results
+    with open(join(dirpath, "end_results.txt"), "w") as f:
+        f.write(f"Plate name\tPlate number\tWell number\tSample ID\tPositive (1) or Negative (0)\t{unit_name}\tOD of mod-peptide\tOD of non-mod-peptide\n")
+        for elements in final_list:
+            for element in elements:
+                print("inner loop")
+                f.write(str(element) + "\t")
+            f.write("\n")
+        f.close()
+
+    return 0
