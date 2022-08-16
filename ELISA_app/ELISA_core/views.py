@@ -1255,7 +1255,6 @@ def report_writeout():
         f.write(f"Plate name\tPlate number\tWell number\tSample ID\tPositive (1) or Negative (0)\t{unit_name}\tOD of mod-peptide\tOD of non-mod-peptide\n")
         for elements in final_list:
             for element in elements:
-                print("inner loop")
                 f.write(str(element) + "\t")
             f.write("\n")
         f.close()
