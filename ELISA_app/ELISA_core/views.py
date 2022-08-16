@@ -318,15 +318,14 @@ def Plate_layout(request):
         if request.POST.get('file_submit'):
             elisa_type = request.POST.get('elisa_type')
             cut_off_type = request.POST.get('cut-off_type')
-            if elisa_type == "1":
-                row_standard = request.POST.get('row_input')
-                column_standard = request.POST.get('column_input')
-                if row_standard == None:
-                    row_standard = 0
-                if column_standard == None:
-                    column_standard = [0, 0]
-                else:
-                    column_standard = column_standard.split(',')
+            row_standard = request.POST.get('row_input')
+            column_standard = request.POST.get('column_input')
+            if row_standard == None:
+                row_standard = 0
+            if column_standard == None:
+                column_standard = [0, 0]
+            else:
+                column_standard = column_standard.split(',')
         if request.POST.get('file_submit'):
             totaal = []
             if request.FILES.getlist("my_file") == []:
@@ -452,9 +451,9 @@ def Plate_layout_3(request):
         for j in range(len(i)):
             for k in range(len(i[j])):
                 for d in range(len(i)):
-                    if i[j][k] == list_st[d]:
-                        dict_st[i[j][k]].append([index, j, k])
-                        if index == 0 and i[j][k] == 'st_1':
+                    if str(i[j][k]).lower() == list_st[d]:
+                        dict_st[i[j][k].lower()].append([index, j, k])
+                        if index == 0 and str(i[j][k]).lower() == 'st_1':
                             st_finder = [0, j, k]
                         i[j][k] = round(float(list_divide[d]), 3)
                     elif i[j][k] == 'Blank':
@@ -855,14 +854,19 @@ def Cut_off(request):
                                     mod_length = len(j[values])/2
                                     if value <= mod_length:
                                         cut_data.append(j[values][value][0])
-                # for g in i[3:8]:
-                #     cut_data.append(g[0])
-            print(len(cut_data))
         elif elisa_type == '2':
-            for i in dictionary[HD][1:]:
-                for g in i[3:]:
-                    cut_data.append(g[0])
-        cut_data.pop(0)
+            for i, j in dictionary.items():
+                if HD == i:
+                    for values in range(len(j)):
+                        for value in range(len(j[values])):
+                            if type(j[values][value][0]) != str:
+                                if int(row_standard) == 0:
+                                    if value != int(column_standard[0]):
+                                        if value != int(column_standard[1]):
+                                            cut_data.append(j[values][value][0])
+                                elif int(row_standard) != values:
+                                    cut_data.append(j[values][value][0])
+        print(len(cut_data))
         cut_dict["OD"] = cut_data
         mean = round(statistics.mean(cut_data), 3)
         std = round(statistics.stdev(cut_data), 3)
