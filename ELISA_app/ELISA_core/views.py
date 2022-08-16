@@ -55,9 +55,9 @@ cut_off_value_au = 0
 
 #new globals
 seprate_dilution = []
-row_standard = ''
+row_standard = 0
 unit_name = ''
-column_standard = ''
+column_standard = 0
 divide_number = 0
 elisa_type = ''
 cut_off_type = ''
@@ -321,6 +321,12 @@ def Plate_layout(request):
             if elisa_type == "1":
                 row_standard = request.POST.get('row_input')
                 column_standard = request.POST.get('column_input')
+                if row_standard == None:
+                    row_standard = 0
+                if column_standard == None:
+                    column_standard = [0, 0]
+                else:
+                    column_standard = column_standard.split(',')
         if request.POST.get('file_submit'):
             totaal = []
             if request.FILES.getlist("my_file") == []:
@@ -833,27 +839,25 @@ def Cut_off(request):
             })
     elif cut_data == []:
         if elisa_type == '1':
-            count_plate = 0
-            count_plate2 = 0
             for i, j in dictionary.items():
                 if HD == i:
                     for values in range(len(j)):
+                        count_the_mod = 0
                         for value in range(len(j[values])):
-                            check = 'yes'
-                            for elements in dict_st.values():
-                                if len(elements) != 0:
-                                    if elements[count_plate][0] == count_plate2:
-                                        pos1 = elements[count_plate][1]
-                                        pos2 = elements[count_plate][2]
-                                        if j[pos1-1][pos2] == j[values][value]:
-                                            check = 'no'
-                            if check == 'yes':
-                                if type(j[values][value][0]) != str and value <= 7:
-                                    cut_data.append(j[values][value][0])
+                            if type(j[values][value][0]) != str:
+                                if int(row_standard) == 0:
+                                    if value != int(column_standard[0]):
+                                        if value != int(column_standard[1]):
+                                            if count_the_mod < 5:
+                                                cut_data.append(j[values][value][0])
+                                                count_the_mod += 1
+                                elif int(row_standard) != values:
+                                    mod_length = len(j[values])/2
+                                    if value <= mod_length:
+                                        cut_data.append(j[values][value][0])
                 # for g in i[3:8]:
                 #     cut_data.append(g[0])
-                count_plate += 2
-                count_plate2 += 1
+            print(len(cut_data))
         elif elisa_type == '2':
             for i in dictionary[HD][1:]:
                 for g in i[3:]:
