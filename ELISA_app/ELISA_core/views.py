@@ -58,6 +58,7 @@ def reset_data():
     global column_standard; column_standard = ''
     global elisa_type; elisa_type = ''
     global cut_off_type; cut_off_type = ''
+    global flow; flow = {}
     #empty plates from db
     Plates.objects.all().delete()
     #empty pngs from images
@@ -340,7 +341,9 @@ def Plate_layout(request):
                     'check': check, 'totaal': totaal,
                 })
             excel_data = Plate_layout_1(request, "P")
+            global flow; flow["PureLayout"] = excel_data #flowline
             totaal = Plate_layout_2(excel_data)
+            flow["ModifiedLayout"] = totaal #flowline
             check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal,
@@ -379,7 +382,7 @@ def Plate_layout_1(request, check_type):
     for row in active_sheet.iter_rows():
         row_data = list()
         for cell in row:
-            if type(cell.value) == float:
+            if type(cell.value) == float: #todo look at this, is this needed?
                 row_data.append(str(round(cell.value)))
             else:
                 row_data.append(str(cell.value))
@@ -410,8 +413,8 @@ def Plate_layout_2(excel_data):
                 break
             else:
                 rows = tot_rows
-    for i in excel_data:
-        k = [e for e in i if e != ('None')]
+    for i in excel_data: #row
+        k = [e for e in i if e != ('None')] #per row append e if e isn't none
         if length_empty != 0 and len(k) != 0:
             for g in range(length_empty):
                 if k[0].isalpha():
@@ -1232,12 +1235,26 @@ def session_readin(session):
             plate.save()
 
 def report_writeout():
+    #todo temp, remove this
+    global flow
+    print([_.id for _ in Plates.objects.all()]) # Inserted Plates Names
+    for i in flow["ModifiedLayout"]:    #modified plates
+        for j in i:
+            for k in j:
+                print(k, "\t", sep='', end='')
+            print(end="\n")
+    for i in flow["PureLayout"]:    #unmodified plates
+        for j in i:
+            print(j, "\t", sep='', end='')
+        print(end="\n")
+    for key, value in flow.items():
+        print(key)
+        print(value)
     #Create directory, checking for uniqueness
-    dirpath = datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M")
+    dirpath = join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
     unique, iterations = False, 1
     while not unique:
         try:
-            print("Saving report to:", dirpath)
             mkdir(dirpath)
             unique = True
         except FileExistsError:
