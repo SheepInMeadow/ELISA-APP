@@ -7,28 +7,36 @@
 <form method="POST">
     {% csrf_token %}
     <p class="spacing_end">
-        How many times higher should the modified peptides (OD) be compared to the non-modified peptides (OD):
+        Rule 1: How many times higher should the modified peptides (OD) be compared to the non-modified peptides (OD):
         <input type="number" name="OD_multiplier" class="input">
         <input type="submit" value="Update table" name="update_table_M" class="button">
     </p>
     <p class="spacing_end">
-        How higher should the modified peptides (OD) be compared to the non-modified peptides (OD):
+        Rule 2: How higher should the modified peptides (OD) be compared to the non-modified peptides (OD):
         <input type="number" name="OD_higher" class="input">
         <input type="submit" value="Update table" name="update_table_H" class="button">
     </p>
     <p class="spacing_end">
-        Above which reference value should the sample be:
+        Rule 3: Above which reference value should the sample be:
         <input type="number" name="reference" class="input">
         {{unit}}
         <input type="submit" value="Update table" name="update_table_S" class="button">
+    </p>
+    <p class="spacing_end">
+        Rule 4: I don't want to use any rule:
+        <input type="submit" value="Update table" name="update_table_No" class="button">
     </p>
     <p class="spacing_end">Choose name for File: <input type="text" name="File_name" class="input">
     <input type="submit" value="Download" name="download" class="button"><br>
     <input type="submit" value="Empty database" name="Empty database" class="button"></p>
 </form>
-<p class="spacing_end">The lower detection is: {{lower}} <br> The cut-off value is: {{cut_off_value}}</p>
+<p class="spacing_end">The lower detection is: {{lower}} <br> The upper detection is: {{upper}} <br>
+    The cut-off value is: {{cut_off_value}} <br> the rule that was selected is: Rule {{rule}}</p>
 <table class="spacing">
     <thead>
+        <th>Plate name</th>
+        <th>Plate number</th>
+        <th>Well number</th>
         <th>Sample ID</th>
         <th>Positive (1) or negative (0)</th>
         <th>{{unit}}</th>
