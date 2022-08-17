@@ -6,6 +6,7 @@
 {% block content %}
 <form method="POST">
     {% csrf_token %}
+    {% if elisa_type == '1' %}
     <p class="spacing_end">
         Rule 1: How many times higher should the modified peptides (OD) be compared to the non-modified peptides (OD):
         <input type="number" name="OD_multiplier" class="input">
@@ -16,6 +17,7 @@
         <input type="number" name="OD_higher" class="input">
         <input type="submit" value="Update table" name="update_table_H" class="button">
     </p>
+    {% endif %}
     <p class="spacing_end">
         Rule 3: Above which reference value should the sample be:
         <input type="number" name="reference" class="input">

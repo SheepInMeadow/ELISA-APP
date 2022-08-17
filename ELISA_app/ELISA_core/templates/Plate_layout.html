@@ -15,17 +15,17 @@
     <div class="plate_top">
         <div class="ELISA_type">
             Select data input type:<br><br>
-            <input type="radio" id="mod/non" name="elisa_type" value="1">
+            <input type="radio" id="mod/non" name="elisa_type" value="1" {% if elisa_type == '1' %} checked='checked' {% endif %}>
             <label for="mod/non" class="gen_text">Modified/Non-modified ELISA</label><br>
-            <input type="radio" id="general" name="elisa_type" value="2">
+            <input type="radio" id="general" name="elisa_type" value="2" {% if elisa_type == '2' %} checked='checked' {% endif %}>
             <label for="general" class="gen_text">General ELISA</label><br><br>
         </div>
 
         <div class="cut-off">
             Cut-off or no cut-off:<br><br>
-            <input type="radio" id="cut-off" name="cut-off_type" value="1">
+            <input type="radio" id="cut-off" name="cut-off_type" value="1" {% if cut_off_type == '1' %} checked='checked' {% endif %}>
             <label for="cut-off" class="gen_text">I want to use HDs to calculate a cut-off</label><br>
-            <input type="radio" id="no_cut-off" name="cut-off_type" value="2">
+            <input type="radio" id="no_cut-off" name="cut-off_type" value="2" {% if cut_off_type == '2' %} checked='checked' {% endif %}>
             <label for="no_cut-off" class="gen_text">I don’t want to calculate a cut-off</label><br><br>
         </div>
 
@@ -34,13 +34,13 @@
         <div class="input" id="input">
             <div id="mod" >
                 Select where the standard is located and upload the data:<br>
-                <input type="radio" id="row" name="reference" onclick="referenceSelect()">
+                <input type="radio" id="row" name="reference" onclick="referenceSelect()" {% if row_input != '0' %} checked='checked' {% endif %}>
                 <label for="row" class="gen_text">Row</label>
-                <input type="text" id="row_input" name="row_input" disabled>
+                <input type="text" id="row_input" name="row_input" value="{{row_input}}" disabled >
                 <br>
-                <input type="radio" id="column" name="reference" onclick="referenceSelect()">
+                <input type="radio" id="column" name="reference" onclick="referenceSelect()" {% if column_input != '0, 0' %} checked='checked' {% endif %}>
                 <label for="column" class="gen_text">Column</label>
-                <input type="text" id="column_input" name="column_input" disabled>
+                <input type="text" id="column_input" name="column_input" value="{{column_input}}" disabled>
                 Please input column numbers in this format: 2, 3<br><br>
             </div>
             <input type="file" name="my_file" class="plate_file"/>
@@ -52,9 +52,9 @@
         </div>
     {% if check == 'go' %}
         <div class="plate_st_text">
-            ST values of all plates: <input required type="number" name="standaard" class="plate_st_input">
-            Divide number: <input required type="number" name="divide" class="plate_st_input"><br><br>
-            Unit name: <input required type="text" name="unit" class="plate_st_input">
+            ST values of all plates: <input type="number" name="standaard" class="plate_st_input" value="{{standard}}">
+            Divide number: <input type="number" name="divide" class="plate_st_input" value="{{divide}}"><br><br>
+            Unit name: <input type="text" name="unit" class="plate_st_input" value="{{unit}}">
             <br><br>
         <input type="submit" name="standaard_input" value="Update table" class="plate_table_button">
     </div>

@@ -1,3 +1,4 @@
+import os
 from django.shortcuts import render
 from .models import Plates
 import openpyxl
@@ -11,6 +12,11 @@ import statistics
 from operator import itemgetter
 import xlrd
 import string
+import pickle
+from django.core import serializers
+from django.conf import settings
+from os.path import join
+from os import sep, listdir
 from copy import deepcopy
 
 
@@ -18,51 +24,64 @@ from copy import deepcopy
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-# session = {totaal : [], 'check' : '', 'end_dilution' : [], 'dictionary' : {},             for perhaps use in database
-#            'HD' : '', 'delete' : [], 'points_dictionary' : {},
-#            'mean_ST_dictionary' : {}, 'mean' : 0, 'std' : 0, 'mean2' : 0,
-#            'std2' : 0, 'check_cut_off' : 'false', 'cut_data' : [],
-#            'outlier_value' : 0.0, 'cut_off_value' : 0.0, 'end_result' : {},
-#            'lower' : 0.0, 'upper' : 0.0, 'intermediate_dictionary' : {},
-#            'params_dictionary' : {}, 'final_dictionary' : {},
-#            'final_list' : [], 'cut_off_value_au' : 0}
+version_number = 1.1
 
-totaal = []
-check = ''
-check2 = ''
-dilution = []
-dictionary = {}
-HD = ''
-delete = []
-points_dictionary = {}
-mean_ST_dictionary = {}
-mean = 0
-std = 0
-mean2 = 0
-std2 = 0
-check_cut_off = 'false'
-cut_data = []
-outlier_value = 0.0
-cut_off_value = 0.0
-end_result = {}
-lower = 0.0
-upper = 0.0
-intermediate_dictionary = {}
-params_dictionary = {}
-final_dictionary = {}
-final_list = []
-cut_off_value_au = 0
+def reset_data():
+    #set globals
+    global totaal; totaal = []
+    global check; check = ''
+    global check2; check2 = ''
+    global dilution; dilution = []
+    global seprate_dilution; seprate_dilution = []
+    global end_dilution; end_dilution = [] #is this even used anymore? -no, no it's not
+    global dictionary; dictionary = {}
+    global HD; HD = ''
+    global delete; delete = []
+    global points_dictionary; points_dictionary = {}
+    global mean_ST_dictionary; mean_ST_dictionary = {}
+    global mean; mean = 0
+    global std; std = 0
+    global mean2; mean2 = 0
+    global std2; std2 = 0
+    global check_cut_off; check_cut_off = 'false'
+    global cut_data; cut_data = []
+    global outlier_value; outlier_value = 0.0
+    global cut_off_value; cut_off_value = 0.0
+    global end_result; end_result = {}
+    global lower; lower = 0.0
+    global upper; upper = 0.0
+    global intermediate_dictionary; intermediate_dictionary = {}
+    global params_dictionary; params_dictionary = {}
+    global final_dictionary; final_dictionary = {}
+    global final_list; final_list = []
+    global cut_off_value_au; cut_off_value_au = 0
+    global unit_name; unit_name = ''
+    global row_standard; row_standard = '0'
+    global column_standard; column_standard = [0, 0]
+    global elisa_type; elisa_type = ''
+    global cut_off_type; cut_off_type = ''
+    #empty plates from db
+    Plates.objects.all().delete()
+    #empty pngs from images
+    for file in listdir(get_mediapath()):
+        if file.endswith('.png'):
+            os.remove(get_mediapath(file))
+    return
 
+def get_mediapath(extension=''):
+    mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
+    return mediapath
 #new globals
 seprate_dilution = []
 row_standard = 0
 unit_name = ''
-column_standard = 0
+column_standard = [0, 0]
 divide_number = 0
 elisa_type = ''
 cut_off_type = ''
 st_finder = []
 dict_st = {}
+standard = 0
 
 
 def Home(request):
@@ -74,7 +93,14 @@ def Home(request):
     Function:
         - Renders the template Home.html when the page is visited.
     """
-    return render(request, 'Home.html')
+    if request.method == 'POST':
+        if request.POST.get('download_pickle'):
+            session_writeout("Manual Session")
+        elif request.POST.get('submit_pickle'):
+            session_readin(request.FILES['my_pickle'])
+    return render(request, 'Home.html', {
+            'version': version_number,
+        })
 
 
 def Input_data(request):
@@ -85,7 +111,7 @@ def Input_data(request):
         -
     Function:
         - Checks if the user clicked the button to empty the database and then renders the page with a message
-          indicating that it was succesfullly emptied. Then checks for if there were any files submitted, if so it will
+          indicating that it was successfullly emptied. Then checks for if there were any files submitted, if so it will
           send the data to the file_data() function. The variable error is then used to determine if the submitted files
           were incorrectly formatted and shows the corresponding error on the page. If all is ok the page renders with
           a message to inform the user of this. If any other error occurs which is not properly caught, the page will
@@ -95,7 +121,7 @@ def Input_data(request):
         if request.method == 'POST':
             error = 'correct'
             if request.POST.get('Empty database'):
-                Plates.objects.all().delete()
+                reset_data()
                 return render(request, 'Input_data.html', {
                     'check': 'correct_emptied',
                 })
@@ -313,7 +339,7 @@ def Plate_layout(request):
           to bottom. If no button was pressed the template simply renders with only the file input field and submit
           button.
     """
-    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name
+    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name, standard
     if request.method == 'POST':
         if request.POST.get('file_submit'):
             elisa_type = request.POST.get('elisa_type')
@@ -331,24 +357,47 @@ def Plate_layout(request):
             if request.FILES.getlist("my_file") == []:
                 check = 'error'
                 return render(request, 'Plate_layout.html', {
-                    'check': check, 'totaal': totaal,
+                    'check': check, 'totaal': totaal,'row_input': row_standard,
+                    'column_input': str(column_standard[0]) + ', ' + str(column_standard[1]), 'elisa_type': elisa_type,
+                    'cut_off_type': cut_off_type,
                 })
             excel_data = Plate_layout_1(request, "P")
             totaal = Plate_layout_2(excel_data)
             check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal,
-                'check': check,
+                'check': check,'row_input': row_standard,
+                'column_input': str(column_standard[0]) + ', ' + str(column_standard[1]), 'elisa_type': elisa_type,
+                    'cut_off_type': cut_off_type,
             })
         if request.POST.get('standaard_input'):
+            elisa_type = request.POST.get('elisa_type')
+            cut_off_type = request.POST.get('cut-off_type')
+            row_standard = request.POST.get('row_input')
+            column_standard = request.POST.get('column_input')
+            if row_standard == None:
+                row_standard = 0
+            if column_standard == None:
+                column_standard = [0, 0]
+            else:
+                column_standard = column_standard.split(',')
             Plate_layout_3(request)
+            standard = request.POST.get('standaard')
             unit_name = request.POST.get('unit')
             check = 'go'
             return render(request, 'Plate_layout.html', {
-                'totaal': totaal, 'check': check, })
+                'totaal': totaal, 'check': check, 'row_input': row_standard,
+                'column_input': str(column_standard[0]) + ', ' + str(column_standard[1]),
+                'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
+                    'cut_off_type': cut_off_type,
+            })
     else:
         return render(request, 'Plate_layout.html', {
-            'totaal': totaal, 'check': check, })
+            'totaal': totaal, 'check': check, 'row_input': row_standard,
+            'column_input': str(column_standard[0]) + ', ' + str(column_standard[1]),
+            'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
+                    'cut_off_type': cut_off_type,
+        })
 
 
 def Plate_layout_1(request, check_type):
@@ -727,7 +776,7 @@ def create_graph(dictionary):
         ax = plt.gca()
         plt.xticks([1.0, 10, 100])
         ax.xaxis.set_major_formatter(ScalarFormatter())
-        plt.savefig('ELISA_core/static/images/' + str(key) + '.png')
+        plt.savefig(get_mediapath(str(key) + ".png"))
         plt.close()
         counter += 1
 
@@ -810,7 +859,7 @@ def Cut_off(request):
                 df = pd.DataFrame(data=cut_dict)
                 ax = sns.swarmplot(data=df, y="New_OD")
                 ax = sns.boxplot(data=df, y="New_OD", color='white')
-                plt.savefig('ELISA_core/static/images/' + 'swarmplot2.png')
+                plt.savefig(get_mediapath('swarmplot2.png'))
                 plt.close()
                 check_cut_off = 'true'
                 return render(request, 'Cut_off.html', {
@@ -1156,7 +1205,7 @@ def End_results(request):
         rule = 'none'
         if request.method == 'POST':
             if request.POST.get('Empty database'):
-                Plates.objects.all().delete()
+                reset_data()
             if request.POST.get('download'):
                 file_name = request.POST.get('File_name')
                 textfile = open("../Download_files/" + file_name + ".txt", "w")
@@ -1315,3 +1364,36 @@ def End_results(request):
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
         })
+
+
+def session_writeout(session_name):  # Note: currently used pickle version = 4, supported from py 3.4 and default from py 3.8
+    session_name += ".ELISA_App"
+    with open(session_name, 'wb') as f:
+        pickle.dump((totaal, check, check2, dilution, seprate_dilution, end_dilution, dictionary, HD, delete,
+                     points_dictionary, mean_ST_dictionary, mean,
+                     std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
+                     intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au,
+                     unit_name, row_standard, column_standard, elisa_type, cut_off_type,
+                     serializers.serialize("xml", Plates.objects.all())), f, protocol=4)  # Plates.objects is serialized to xml, preventing upgrading issues with Django
+        print("pickle success")
+
+
+def session_readin(session):
+    varlist = (
+        "totaal", "check", "check2", "dilution", "seprate_dilution", "end_dilution", "dictionary", "HD", "delete",
+        "points_dictionary", "mean_ST_dictionary", "mean",
+        "std", "mean2", "std2", "check_cut_off", "cut_data", "outlier_value", "cut_off_value", "end_result", "lower",
+        "upper", "intermediate_dictionary", "params_dictionary", "final_dictionary", "final_list", "cut_off_value_au",
+        "unit_name", "row_standard", "column_standard", "elisa_type", "cut_off_type")
+
+    with session as f:
+        sessiontuple = pickle.load(f)
+        # [:-1] to exclude serialized plate db
+        for data, var in zip(sessiontuple[:-1], varlist):
+            globals()[var] = data
+            print(var)
+            print(data, end="\n\n")
+        # start plate db readin
+        Plates.objects.all().delete()
+        for plate in serializers.deserialize("xml", sessiontuple[-1]):
+            plate.save()
