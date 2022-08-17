@@ -32,6 +32,8 @@
 </form>
 <p class="spacing_end">The lower detection is: {{lower}} <br> The upper detection is: {{upper}} <br>
     The cut-off value is: {{cut_off_value}} <br> the rule that was selected is: Rule {{rule}}</p>
+
+{% if elisa_type == '1' %}
 <table class="spacing">
     <thead>
         <th>Plate name</th>
@@ -51,4 +53,25 @@
     </tr>
     {% endfor %}
 </table>
+{% endif %}
+{% if elisa_type == '2' %}
+<table class="spacing">
+    <thead>
+        <th>Plate name</th>
+        <th>Plate number</th>
+        <th>Well number</th>
+        <th>Sample ID</th>
+        <th>Positive (1) or negative (0)</th>
+        <th>{{unit}}</th>
+        <th>OD</th>
+    </thead>
+    {% for list in final_list %}
+    <tr>
+       {% for value in list %}
+        <td>{{value}}</td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
 {% endblock %}
