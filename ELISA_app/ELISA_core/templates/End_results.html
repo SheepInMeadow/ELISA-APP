@@ -31,7 +31,7 @@
     <input type="submit" value="Empty database" name="Empty database" class="button"></p>
 </form>
 <p class="spacing_end">The lower detection is: {{lower}} <br> The upper detection is: {{upper}} <br>
-    The cut-off value is: {{cut_off_value}} <br> the rule that was selected is: Rule {{rule}}</p>
+    {% if cut_off_value != 0 %}The cut-off value is: {{cut_off_value}} {% endif %}<br> the rule that was selected is: Rule {{rule}}</p>
 
 {% if elisa_type == '1' %}
 <table class="spacing">

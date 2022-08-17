@@ -791,8 +791,8 @@ def Cut_off(request):
         cut_dict = {}
         if cut_off_type == '2':
             return render(request, 'Error.html', {
-                'error': 'In plate layout was selected to not use HD for cutoff. Go to intermediate result to continue'
-                         ' the application'
+                'error': 'The option to not use a cut-off was selected. Move on to intermediate result to continue'
+                         ' the application.'
             })
         if request.method == 'POST':
             if request.POST.get('outlier_submit'):
@@ -1173,7 +1173,10 @@ def End_results(request):
                     for keys, values in dictionary.items():
                         if keys == HD:
                             params = params_dictionary[HD]
-                            cut_off_value_au = formula2(float(cut_off_value), *params) * 1
+                            if cut_off_type == '1':
+                                cut_off_value_au = formula2(float(cut_off_value), *params) * 1
+                            else:
+                                cut_off_value_au = 0
                         if keys not in delete:
                             check_first_col = int(column_standard[0]) - 1
                             check_second_col = int(column_standard[1]) - 1
