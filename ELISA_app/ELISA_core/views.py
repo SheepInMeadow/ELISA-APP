@@ -866,7 +866,6 @@ def Cut_off(request):
                                             cut_data.append(j[values][value][0])
                                 elif int(row_standard) != values:
                                     cut_data.append(j[values][value][0])
-        print(len(cut_data))
         cut_dict["OD"] = cut_data
         mean = round(statistics.mean(cut_data), 3)
         std = round(statistics.stdev(cut_data), 3)
@@ -1149,111 +1148,151 @@ def End_results(request):
           is given an 1, if they are not met then the list gets an 0. After the list is filled and sorted
           the list is given to the render.
     """
-    try:
-        global final_list
-        global cut_off_value_au
-        global final_dictionary
-        global end_result
-        rule = 'none'
-        if request.method == 'POST':
-            if request.POST.get('Empty database'):
-                Plates.objects.all().delete()
-            if request.POST.get('download'):
-                file_name = request.POST.get('File_name')
-                textfile = open("../Download_files/" + file_name + ".txt", "w")
-                for elements in final_list:
-                    for element in elements:
-                        textfile.write(str(element) + "\t")
-                    textfile.write("\n")
-                textfile.close()
-            if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
-                    request.POST.get('update_table_S') or request.POST.get('update_table_No'):
-                final_dictionary = {}
-                OD_multiplier = request.POST.get('OD_multiplier')
-                if len(end_result[HD][0]) == 2:
-                    for keys, values in dictionary.items():
-                        if keys == HD:
-                            params = params_dictionary[HD]
-                            cut_off_value_au = formula2(float(cut_off_value), *params) * 1
-                        if keys not in delete:
-                            counter = 0
-                            for OD_list in values[1:]:
-                                well = OD_list[0][0]
-                                plate_number = 3
-                                for OD in OD_list[3:]:
-                                    end_result[keys][counter].append(OD[0])
-                                    end_result[keys][counter].append(well)
-                                    end_result[keys][counter].append(plate_number)
+    #try:
+    global final_list
+    global cut_off_value_au
+    global final_dictionary
+    global end_result
+    rule = 'none'
+    if request.method == 'POST':
+        if request.POST.get('Empty database'):
+            Plates.objects.all().delete()
+        if request.POST.get('download'):
+            file_name = request.POST.get('File_name')
+            textfile = open("../Download_files/" + file_name + ".txt", "w")
+            for elements in final_list:
+                for element in elements:
+                    textfile.write(str(element) + "\t")
+                textfile.write("\n")
+            textfile.close()
+        if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
+                request.POST.get('update_table_S') or request.POST.get('update_table_No'):
+            final_dictionary = {}
+            OD_multiplier = request.POST.get('OD_multiplier')
+            if len(end_result[HD][0]) == 2:
+                for keys, values in dictionary.items():
+                    if keys == HD:
+                        params = params_dictionary[HD]
+                        cut_off_value_au = formula2(float(cut_off_value), *params) * 1
+                    if keys not in delete:
+                        check_first_col = int(column_standard[0]) - 1
+                        check_second_col = int(column_standard[1]) - 1
+                        counter = 0
+                        row = values[1:]
+                        if int(row_standard) != 0:
+                            non_mod_skip = 12 * int(row_standard)
+                        for OD_list in row:
+                            well = OD_list[0][0]
+                            plate_number = 1
+                            column = OD_list[1:]
+                            for OD in column:
+                                if row_standard != 0:
+                                    if counter < (non_mod_skip - 12) or counter >= non_mod_skip:
+                                        end_result[keys][counter].append(OD[0])
+                                        end_result[keys][counter].append(well)
+                                        end_result[keys][counter].append(plate_number)
                                     counter += 1
                                     plate_number += 1
-                sampleID = 1
-                final_list = []
-                for keys, values in end_result.items():
-                    if keys != HD:
-                        counter = 0
-                        counter2 = 0
-                        for elements in values:
-                            if elements[0] != 'Empty':
-                                if counter < 5:
+                                else:
+                                    if counter == check_second_col:
+                                        check_first_col += 12
+                                        check_second_col += 12
+                                    elif counter != check_first_col:
+                                        end_result[keys][counter].append(OD[0])
+                                        end_result[keys][counter].append(well)
+                                        end_result[keys][counter].append(plate_number)
+                                    counter += 1
+                                    plate_number += 1
+            sampleID = 1
+            final_list = []
+            for keys, values in end_result.items():
+                if keys != HD:
+                    counter = 0
+                    counter2 = 0
+                    mod_check_colum1 = int(column_standard[0]) - 1
+                    mod_check_colum2 = int(column_standard[1]) - 1
+                    for elements in values:
+                        if int(row_standard) != 0:
+                            non_mod_count = 6
+                            non_mod_limit = 6
+                            non_mod_skip = 12 * int(row_standard)
+                            if counter2 < (non_mod_skip - 12) or counter2 >= non_mod_skip:
+                                non_mod_check = True
+                            else:
+                                non_mod_check = False
+                        elif int(row_standard) == 0:
+                            non_mod_count = 5
+                            non_mod_limit = 7
+                            if counter2 == mod_check_colum1:
+                                non_mod_check = False
+                            elif counter2 == mod_check_colum2:
+                                mod_check_colum1 += 12
+                                mod_check_colum2 += 12
+                                non_mod_check = False
+                            else:
+                                non_mod_check = True
+                        if elements[0] != 'Empty':
+                            if counter < non_mod_limit:
+                                if non_mod_check:
                                     if float(elements[1]) >= float(lower):
                                         if elements[1] >= float(cut_off_value_au):
                                             if request.POST.get('update_table_M'):
                                                 rule = 1
-                                                if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
+                                                if (values[counter2][2])/(values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
                                                     final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                                  values[counter2][3], elements[0], 1,
+                                                                                  values[counter2][3], str(elements[0]), 1,
                                                                                   round(elements[1]), values[counter2][2],
-                                                                                  values[counter2 + 5][2]]
+                                                                                  values[counter2 + non_mod_count][2]]
                                             elif request.POST.get('update_table_H'):
                                                 rule = 2
                                                 OD_multiplier = request.POST.get('OD_higher')
-                                                if (values[counter2][2]) - (values[counter2 + 5][2]) >= int(OD_multiplier):
+                                                if (values[counter2][2]) - (values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
                                                     final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                                  values[counter2][3], elements[0], 1,
+                                                                                  values[counter2][3], str(elements[0]), 1,
                                                                                   round(elements[1]), values[counter2][2],
-                                                                                  values[counter2 + 5][2]]
+                                                                                  values[counter2 + non_mod_count][2]]
                                             elif request.POST.get('update_table_No'):
                                                 rule = 4
                                                 final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                              values[counter2][3], elements[0], 1,
+                                                                              values[counter2][3], str(elements[0]), 1,
                                                                               round(elements[1]), values[counter2][2],
-                                                                              values[counter2 + 5][2]]
+                                                                              values[counter2 + non_mod_count][2]]
                                             elif request.POST.get('update_table_S'):
                                                 rule = 3
                                                 OD_multiplier = request.POST.get('reference')
                                                 if (round(elements[1])) >= int(OD_multiplier):
                                                     final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                                  values[counter2][3], elements[0], 1,
+                                                                                  values[counter2][3], str(elements[0]), 1,
                                                                                   round(elements[1]), values[counter2][2],
-                                                                                  values[counter2 + 5][2]]
+                                                                                  values[counter2 + non_mod_count][2]]
                                     if sampleID not in final_dictionary:
                                         if float(elements[1]) < float(lower):
                                             final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
-                                                                          elements[0], 0, '<' + str(lower),
-                                                                          values[counter2][2], values[counter2 + 5][2]]
+                                                                          str(elements[0]), 0, '<' + str(lower),
+                                                                          values[counter2][2], values[counter2 + non_mod_count][2]]
                                         else:
                                             final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
-                                                                          elements[0], 0, round(float(elements[1])),
-                                                                          values[counter2][2], values[counter2 + 5][2]]
-                                sampleID += 1
-                            counter += 1
-                            counter2 += 1
-                            if counter == 10:
-                                counter = 0
-                for i, lists in final_dictionary.items():
-                    final_list.append(lists)
-                final_list = sorted(final_list, key=itemgetter(3))
-        return render(request, 'End_results.html', {
-            'final_list': final_list,
-            'upper': upper,
-            'lower': lower,
-            'cut_off_value': round(cut_off_value_au),
-            'rule': rule,
-            'unit': unit_name,
-            'elisa_type': elisa_type,
-            'cut_off_type': cut_off_type,
-        })
-    except:
-        return render(request, 'Error.html', {
-            'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
-        })
+                                                                          str(elements[0]), 0, round(float(elements[1])),
+                                                                          values[counter2][2], values[counter2 + non_mod_count][2]]
+                            sampleID += 1
+                        counter += 1
+                        counter2 += 1
+                        if counter == 12:
+                            counter = 0
+            for i, lists in final_dictionary.items():
+                final_list.append(lists)
+            final_list = sorted(final_list, key=itemgetter(3))
+    return render(request, 'End_results.html', {
+        'final_list': final_list,
+        'upper': upper,
+        'lower': lower,
+        'cut_off_value': round(cut_off_value_au),
+        'rule': rule,
+        'unit': unit_name,
+        'elisa_type': elisa_type,
+        'cut_off_type': cut_off_type,
+    })
+    # except:
+    #     return render(request, 'Error.html', {
+    #         'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
+    #     })
