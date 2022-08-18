@@ -82,6 +82,7 @@ cut_off_type = ''
 st_finder = []
 dict_st = {}
 standard = 0
+rule = 'none'
 
 
 def Home(request):
@@ -327,17 +328,32 @@ def Plate_layout(request):
         - request: Catches submits from template.
         - totaal: An empty list.
         - check: An empty string.
+        - row_standard: A string with only one 0
+        - column_standard: A list with two zero's
+        - elisa_type: An empty string
+        - cut_off_type: An empty string
+        - unit_name: An empty string
+        - standard: An 0
     Output:
         - totaal: A nested list with submitted data from a plate layout file.
         - check: A variable that is used to check if the data is properly read and ready to be formatted into a table.
+        - row_standard: A string with as value a number telling which row contains the ST values
+        - column_standard: A list with as values numbers telling which columns contain the ST values
+        - elisa_type: An string with the numbers 1 or 2.
+        - cut_off_type: An string with the numbers 1 or 2.
+        - unit_name: An string with it the submitted value
+        - standard: An number with it the submitted value
     Function:
-        - This function checks if the user has submitted a plate layout file. If they did not the page will be rendered
+        - This function checks if the user has submitted a plate layout file. It first load in the submitted values from the page
+          and save them in global variables. After it will check if some of those variables are empty to check if they are equal to None.
+          If they are then the variable gets replaced with a zero for column if it was not equal to zero then it gets
+          split so the submitted value becomes a list. Then it checks If they submitted a file, if they did not the page will be rendered
           with an error message telling the user to select a file. If the user did select and submit a file it will be
           passed onto the Plate_layout_1() en Plate_layout_2() function. Afterwards it will rerender the page and
-          generate a table containing the data from the file. If the user then fills in the input field and submits
-          this value by clicking the button, it will reload the page and automatically fill in the ST values from top
-          to bottom. If no button was pressed the template simply renders with only the file input field and submit
-          button.
+          generate a table containing the data from the file. If no file was submitted it will check if the button standart_input
+          was pressed. if so then first it wil load in the submitted values from the page and save them in global variables.
+          After it will call the function plate_layout3() to get the new standart, then it save some variable that where
+           submitted and render the page.
     """
     global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name, standard
     if request.method == 'POST':
@@ -358,7 +374,7 @@ def Plate_layout(request):
                 check = 'error'
                 return render(request, 'Plate_layout.html', {
                     'check': check, 'totaal': totaal,'row_input': row_standard,
-                    'column_input': str(column_standard[0]) + ', ' + str(column_standard[1]), 'elisa_type': elisa_type,
+                    'column_input': str(column_standard[0]) + ',' + str(column_standard[1]), 'elisa_type': elisa_type,
                     'cut_off_type': cut_off_type,
                 })
             excel_data = Plate_layout_1(request, "P")
@@ -367,7 +383,7 @@ def Plate_layout(request):
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal,
                 'check': check,'row_input': row_standard,
-                'column_input': str(column_standard[0]) + ', ' + str(column_standard[1]), 'elisa_type': elisa_type,
+                'column_input': str(column_standard[0]) + ',' + str(column_standard[1]), 'elisa_type': elisa_type,
                     'cut_off_type': cut_off_type,
             })
         if request.POST.get('standaard_input'):
@@ -387,14 +403,14 @@ def Plate_layout(request):
             check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal, 'check': check, 'row_input': row_standard,
-                'column_input': str(column_standard[0]) + ', ' + str(column_standard[1]),
+                'column_input': str(column_standard[0]) + ',' + str(column_standard[1]),
                 'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
                     'cut_off_type': cut_off_type,
             })
     else:
         return render(request, 'Plate_layout.html', {
             'totaal': totaal, 'check': check, 'row_input': row_standard,
-            'column_input': str(column_standard[0]) + ', ' + str(column_standard[1]),
+            'column_input': str(column_standard[0]) + ',' + str(column_standard[1]),
             'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
                     'cut_off_type': cut_off_type,
         })
@@ -519,7 +535,7 @@ def Dilutions(request):
         - seprate_dilution: A nested list with the names of plates
     Function:
         - The function checks if a file is submitted, if so then it gives it to other functions in order to read it.
-          Then it changes a function to 'go' to allow it to be shown on the website. Then it checks of dilution onl has 1
+          Then it changes a function to 'go' to allow it to be shown on the website. Then it checks of dilution only has 1
           plate or more and if its more is it the same size as plate layout.
           the function also checks if the user submitted the options so combine plate names with one dilution file. then
           it checks if the user submitted another file inorder to add it to the dilution variable.
@@ -806,9 +822,13 @@ def Cut_off(request):
         - mean2: Has a zero number.
         - std2: Has a zero number.
         - cut_data: An empty list
+        - row_standard: A string with as value a number telling which row contains the ST values
+        - column_standard: A list with as values numbers telling which columns contain the ST values
         - check_cut_off: The string false
         - outlier_value: A float with zero
         - cut_off_value: A float with zero
+        - cut_off_type: A string with the number 1 or 2
+        - elisa_type: A string with the number 1 or 2
         - dictionary: A dictionary with as key the plate names and the value a nested list with in it the OD and RBG code.
         - HD: An string with the name of the selected healthy donor plate.
     Output:
@@ -822,7 +842,18 @@ def Cut_off(request):
         - outlier_value: A value with the outlier score
         - cut_off_value: A value with the cut-off value
     Function:
-        -This function checks if a button is pressed if not than it will create the first swarm plot for the outliers.
+        - This function starts by looking if cut_off_type is equal to 2, if so that means the user did,t want a cutt off
+         so an error page is render with the text that the user did not want a cut off. then it checks if a button is
+         pressed if not than it will create the first swarm plot for the outliers. This is done by looking which type of
+         analysis this is, is it type 1 then it contains mod/non-mods so the data needs to be filtered for it. in order to
+         do that it needs to look at the row_standard to see if the variable is equal to zero. if so than that means the ST values
+         are in the columns, if not then they are in the rows. if the row_standard is zero the function will check if the
+         value is not the same as the first or second position in column_standard. Because if they are the same then
+         that means that value is the ST value. count_the_mod wil check if the values are mod values if count_the_mod is
+         bigger than 5 that means the values are now the non-mod values. For the rows it checks if values is not the same
+         as row_standard and then checks if value is bigger than mod_lengths, if so then that means that value is a non-mod
+         value and isn't allowed in the data. all of this is the same for when elisa_type is equal to 2 but without the
+         count_the_mod, mod_length parts.
          When a button is pressed it will look into which button was pressed. IF the outlier_submit button was pressed.
          Then it will create the swarm plot for te cut-ff. If the button from cut_off_submit was pressed a cut-off is
          calculated.
@@ -970,6 +1001,7 @@ def Intermediate_result(request):
         - end_result: An empty dictionary.
         - lower: The number zero.
         - upper: The number zero.
+        - elisa_type: A string with the number 1 or 2
         - HD: An string with the name of the selected healthy donor plate.
         - points_dictionary: A dictionary with as key the name of the plate and as value a list of the chosen lower and
                             upper points of that plate.
@@ -985,10 +1017,12 @@ def Intermediate_result(request):
         - lower: An au/ml score from the lowest chosen value.
         - upper: An au/ml score from the highest chosen value.
     Function:
-        - The fuction first checks which plates it should not to be looking if the plate names in intermediate_dictionary
+        - The function first checks which plates it should not to be looking if the plate names in intermediate_dictionary
           are in delete. Then it looks if seprate_dilution is empty or not after this check top and bot will be filled
-          with the dilution belonging to that plate. After that
-          it will look if the values from end_result are smaller or bigger then lower or upper. If the value is smaller
+          with the dilution belonging to that plate. After that it will look if elisa_type is equal to 2 or smaller
+          then count_mod 5. this is done to filter out the non-mod values if needed.
+          if it passes the if-statements it will look if the values from end_result are smaller or bigger
+          then lower or upper. If the value is smaller
           than lower it gets a 1, if higher than upper it gets a 3. If nether than it gets a 2. When the list is filled
           it gets sorted by sample ID and everything gets put into one list. also two other list are made one with the
           last 20 of the below values and the first 20 of the linear values. and the other list with the 20 last of the
@@ -1084,6 +1118,8 @@ def Intermediate_result(request):
                 return render(request, 'Intermediate_result.html', {
                     'complete_list': complete_list,
                     'unit': unit_name,
+                    'lower': lower,
+                    'upper': upper,
                     'limit_list': up_list,
                     'check': 'go_up'
                 })
@@ -1092,6 +1128,8 @@ def Intermediate_result(request):
         return render(request, 'Intermediate_result.html', {
             'complete_list': complete_list,
             'unit': unit_name,
+            'lower': lower,
+            'upper': upper,
             'limit_list' : low_list,
             'check' : 'go_low'
         })
@@ -1173,6 +1211,11 @@ def End_results(request):
         - final_dictionary: An empty dictionarty list.
         - final_list: An empty list.
         - cut_off_value_au: The number zero.
+        - rule: string with none
+        - row_standard: A string with as value a number telling which row contains the ST values
+        - column_standard: A list with as values numbers telling which columns contain the ST values
+        - elisa_type: A string with the number 1 or 2
+        - cut_off_type: A string with the number 1 or 2
         - dictionary: A dictionary with as key the plate names and the value a nested list with in it the OD and RBG code.
         - cut_off_value: It has contains a float which is the OD given by the cut_off function
         - params_dictionary: In this dictionary the keys are the name of the plates and the values the params.
@@ -1188,11 +1231,22 @@ def End_results(request):
         - final_list: A list with as first a sample id, second an 0 or 1 , third the au/ml, fourth an OD and if requested
                       an non-mod OD.
         - cut_off_value_au: An au/ml, calculated from the OD from cut_off_value and the params from params_dictionary.
+        - rule: string with 1 or 2 or 3 or 4.
         - end_result: A dictionary with as key the name of the plates and the values a nested list. the nested list
                       have as values first a sample id, second the au/ml, and third a 1 or 2 or 3.
     Function:
-        - The function first checks if any button was pressed, if their were any buttons pressed it then check which.
-          After checking which buttons where pressed it will fill up the final_dictionary and final_list by checking
+        - The function first checks if any button was pressed, if there were any buttons pressed it then check which.
+          first it will check if the user wanted a cutt_off by checking cutt_off type.
+          second it will add some additional information to end_result dictionary. But in order to that it needed to see
+          where the ST values are. With an if statement it will look if the ST values are in the rows or columns.
+          if row is not equal to zero then the ST values are in the rows, so now it needs to skip the row with the ST values
+          it does that by checking if the counter is between non_mod_skip - 12 and non_mod_skip because if its in bewteen
+          that means that is the row with the ST values. For the columns it checks if two positions are the same as the counter
+          check_first_col and check_second_col will be + 12 to move down a row so all columns will be checked.
+          Now the function will check if the analysis has mod/non-mods if it doesn't have them then its sets non_mod_limit
+          on 12 otherwise it will different between 6 for rows and 7 for columns. now just like with the ST values it will
+          check two things for rows it will check if the counter is between and for columns if it is the same.
+          After doing all that it will fill up the final_dictionary and final_list by checking
           if they pass any off the requirement given by the if-statement. If all the requirements are met then the list
           is given an 1, if they are not met then the list gets an 0. After the list is filled and sorted
           the list is given to the render.
@@ -1202,7 +1256,7 @@ def End_results(request):
         global cut_off_value_au
         global final_dictionary
         global end_result
-        rule = 'none'
+        global rule
         if request.method == 'POST':
             if request.POST.get('Empty database'):
                 reset_data()
@@ -1293,33 +1347,34 @@ def End_results(request):
                                 if counter < non_mod_limit:
                                     if non_mod_check:
                                         if float(elements[1]) >= float(lower):
-                                            if elements[1] >= float(cut_off_value_au):
-                                                if elisa_type == '1':
-                                                    end_variable = [keys, values[counter2][4],
-                                                                                      values[counter2][3], str(elements[0]), 1,
-                                                                                      round(elements[1]), values[counter2][2],
-                                                                                      values[counter2 + non_mod_count][2]]
-                                                else:
-                                                    end_variable = [keys, values[counter2][4],
-                                                                    values[counter2][3], str(elements[0]), 1,
-                                                                    round(elements[1]), values[counter2][2]]
-                                                if request.POST.get('update_table_M'):
-                                                    rule = 1
-                                                    if (values[counter2][2])/(values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                            if float(elements[1]) <= float(upper):
+                                                if elements[1] >= float(cut_off_value_au):
+                                                    if elisa_type == '1':
+                                                        end_variable = [keys, values[counter2][4],
+                                                                        values[counter2][3], str(elements[0]), 1,
+                                                                        round(elements[1]), values[counter2][2],
+                                                                        values[counter2 + non_mod_count][2]]
+                                                    else:
+                                                        end_variable = [keys, values[counter2][4],
+                                                                        values[counter2][3], str(elements[0]), 1,
+                                                                        round(elements[1]), values[counter2][2]]
+                                                    if request.POST.get('update_table_M'):
+                                                        rule = 1
+                                                        if (values[counter2][2])/(values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                            final_dictionary[sampleID] = end_variable
+                                                    elif request.POST.get('update_table_H'):
+                                                        rule = 2
+                                                        OD_multiplier = request.POST.get('OD_higher')
+                                                        if (values[counter2][2]) - (values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                            final_dictionary[sampleID] = end_variable
+                                                    elif request.POST.get('update_table_No'):
+                                                        rule = 4
                                                         final_dictionary[sampleID] = end_variable
-                                                elif request.POST.get('update_table_H'):
-                                                    rule = 2
-                                                    OD_multiplier = request.POST.get('OD_higher')
-                                                    if (values[counter2][2]) - (values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
-                                                        final_dictionary[sampleID] = end_variable
-                                                elif request.POST.get('update_table_No'):
-                                                    rule = 4
-                                                    final_dictionary[sampleID] = end_variable
-                                                elif request.POST.get('update_table_S'):
-                                                    rule = 3
-                                                    OD_multiplier = request.POST.get('reference')
-                                                    if (round(elements[1])) >= int(OD_multiplier):
-                                                        final_dictionary[sampleID] = end_variable
+                                                    elif request.POST.get('update_table_S'):
+                                                        rule = 3
+                                                        OD_multiplier = request.POST.get('reference')
+                                                        if (round(elements[1])) >= int(OD_multiplier):
+                                                            final_dictionary[sampleID] = end_variable
                                         if sampleID not in final_dictionary:
                                             if float(elements[1]) < float(lower):
                                                 if elisa_type == '1':
@@ -1330,6 +1385,16 @@ def End_results(request):
                                                     final_dictionary[sampleID] = [keys, values[counter2][4],
                                                                                   values[counter2][3],
                                                                                   str(elements[0]), 0, '<' + str(lower),
+                                                                                  values[counter2][2]]
+                                            elif float(elements[1]) >= float(upper):
+                                                if elisa_type == '1':
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
+                                                                              str(elements[0]), 1, '>' + str(upper),
+                                                                              values[counter2][2], values[counter2 + non_mod_count][2]]
+                                                else:
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4],
+                                                                                  values[counter2][3],
+                                                                                  str(elements[0]), 1, '>' + str(upper),
                                                                                   values[counter2][2]]
                                             else:
                                                 if elisa_type == '1':

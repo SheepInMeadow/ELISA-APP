@@ -34,13 +34,13 @@
         <div class="input" id="input">
             <div id="mod" >
                 Select where the standard is located and upload the data:<br>
-                <input type="radio" id="row" name="reference" onclick="referenceSelect()" {% if row_input != '0' %} checked='checked' {% endif %}>
+                <input type="radio" id="row" name="reference"  {% if row_input != '0' %} checked='checked' {% endif %}>
                 <label for="row" class="gen_text">Row</label>
-                <input type="text" id="row_input" name="row_input" value="{{row_input}}" disabled >
+                <input type="text" id="row_input" name="row_input" value="{{row_input}}"  >
                 <br>
-                <input type="radio" id="column" name="reference" onclick="referenceSelect()" {% if column_input != '0, 0' %} checked='checked' {% endif %}>
+                <input type="radio" id="column" name="reference"  {% if column_input != '0,0' %} checked='checked' {% endif %}>
                 <label for="column" class="gen_text">Column</label>
-                <input type="text" id="column_input" name="column_input" value="{{column_input}}" disabled>
+                <input type="text" id="column_input" name="column_input" value="{{column_input}}">
                 Please input column numbers in this format: 2, 3<br><br>
             </div>
             <input type="file" name="my_file" class="plate_file"/>
