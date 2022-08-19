@@ -13,11 +13,12 @@ import string
 import pickle
 from django.core import serializers
 from django.conf import settings
-from os.path import join
+from os.path import join, getctime
 from os import sep, listdir, mkdir, remove
 from copy import deepcopy
 import datetime
 import shutil
+from pathlib import Path
 # Make multithreading safe
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -59,6 +60,7 @@ def reset_data():
     global elisa_type; elisa_type = ''
     global cut_off_type; cut_off_type = ''
     global flow; flow = {}
+    global last_autosave; last_autosave = 0.0
     #empty plates from db
     Plates.objects.all().delete()
     #empty pngs from images
@@ -1233,6 +1235,17 @@ def session_readin(session):
         Plates.objects.all().delete()
         for plate in serializers.deserialize("xml", sessiontuple[-1]):
             plate.save()
+
+def autosave(): #path here is the directory path, Path refers to the resolve lib, should probably rename the import?
+    global last_autosave #todo implement timed delay between saves
+    time = datetime.datetime.now()
+    path = join(Path(settings.BASE_DIR).resolve().parent, "Autosaves")
+    dircontents = listdir(path)
+    session_writeout(time.strftime(join("Autosaves", "Autosave %d-%m-%Y  %H.%M.%S")))
+    if len(dircontents) > 5:
+        remove(min([join(path, session) for session in dircontents], key=getctime)) #Get the oldest file in the dir and remove it
+
+
 
 def report_writeout():
     #todo temp, remove this
