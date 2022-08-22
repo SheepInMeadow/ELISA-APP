@@ -71,7 +71,11 @@ def reset_data():
 
 
 def get_mediapath(extension=''):
-    mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
+    try:
+        mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
+    except FileNotFoundError:
+        mkdir(join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images'))
+        mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
     return mediapath
 
 def Home(request):
@@ -1241,7 +1245,7 @@ def session_readin(session):
 
 
 def autosave(minutes_between_saves = 5): #path here is the directory path, Path refers to the resolve lib, should probably rename the import?
-    global last_autosave #todo implement timed delay between saves
+    global last_autosave
     time = datetime.datetime.now()
     if (time - last_autosave).seconds / 60 >= minutes_between_saves:
         last_autosave = time
@@ -1265,6 +1269,11 @@ def report_writeout():
         for j in i:
             print(j, "\t", sep='', end='')
         print(end="\n")
+    for i in dilution: #dilution table
+        for j in i:
+            for k in j:
+                print(k, "\t", sep='', end='')
+            print(end="\n")
     for key, value in flow.items():
         print(key)
         print(value)
