@@ -23,7 +23,7 @@ from pathlib import Path
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-version_number = 1.1
+version_number = 1.2
 
 def reset_data():
     #set globals
@@ -60,7 +60,7 @@ def reset_data():
     global elisa_type; elisa_type = ''
     global cut_off_type; cut_off_type = ''
     global flow; flow = {}
-    global last_autosave; last_autosave = 0.0
+    global last_autosave; last_autosave = datetime.datetime(1970, 1, 1, 0, 0)
     #empty plates from db
     Plates.objects.all().delete()
     #empty pngs from images
@@ -68,6 +68,7 @@ def reset_data():
         if file.endswith('.png'):
             remove(get_mediapath(file))
     return
+
 
 def get_mediapath(extension=''):
     mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
@@ -723,6 +724,7 @@ def create_graph(dictionary):
         plt.close()
         counter += 1
 
+
 def formula(x, A, B, C, D, E):
     """
     Input:
@@ -1013,6 +1015,7 @@ def Intermediate_result(request):
                      'your preferences on the visualize Data page.'
         })
 
+
 def intermediate_list(key, params):
     """
     Input:
@@ -1236,15 +1239,17 @@ def session_readin(session):
         for plate in serializers.deserialize("xml", sessiontuple[-1]):
             plate.save()
 
-def autosave(): #path here is the directory path, Path refers to the resolve lib, should probably rename the import?
+
+def autosave(minutes_between_saves = 5): #path here is the directory path, Path refers to the resolve lib, should probably rename the import?
     global last_autosave #todo implement timed delay between saves
     time = datetime.datetime.now()
-    path = join(Path(settings.BASE_DIR).resolve().parent, "Autosaves")
-    dircontents = listdir(path)
-    session_writeout(time.strftime(join("Autosaves", "Autosave %d-%m-%Y  %H.%M.%S")))
-    if len(dircontents) > 5:
-        remove(min([join(path, session) for session in dircontents], key=getctime)) #Get the oldest file in the dir and remove it
-
+    if (time - last_autosave).seconds / 60 >= minutes_between_saves:
+        last_autosave = time
+        path = join(Path(settings.BASE_DIR).resolve().parent, "Autosaves")
+        dircontents = listdir(path)
+        session_writeout(time.strftime(join("Autosaves", "Autosave %d-%m-%Y  %H.%M.%S")))
+        if len(dircontents) > 5:
+            remove(min([join(path, session) for session in dircontents], key=getctime)) #Get the oldest file in the dir and remove it
 
 
 def report_writeout():

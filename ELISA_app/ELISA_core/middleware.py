@@ -10,6 +10,6 @@ class AutosaveMiddleware:
         return response
 
     def process_view(self, request, view_func, view_args, view_kwargs):
-        print(request.path_info == '/')
-        autosave()
+        if request.path_info != '/':
+            autosave()
         pass
