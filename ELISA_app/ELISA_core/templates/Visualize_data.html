@@ -60,6 +60,7 @@
         </div>
         <br><br><br><br><br><br><br><br><br><br><br><br><br><br>
     {% endfor %}
+    {% if cut_off_type == '1' %}
     <div id="Healthydonor">
         Choose the plate with healthy donor data:
         <select name="HD">
@@ -69,5 +70,12 @@
             <input type="submit" value="Confirm" id="spacing">
         </select>
     </div>
+    {% endif %}
+    {% if cut_off_type == '2' %}
+    <div id="Healthydonor">
+        Submit your options
+        <input type="submit" value="Confirm" id="spacing">
+    </div>
+    {% endif %}
 </form>
 {% endblock %}

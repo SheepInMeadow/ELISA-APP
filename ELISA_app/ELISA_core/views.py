@@ -746,12 +746,13 @@ def Visualize_data(request):
             create_graph(dictionary)
         return render(request, 'Visualize_data.html', {
             'dictionary': dictionary,
-        })
+            'cut_off_type': cut_off_type,
+    })
     except:
-        return render(request, 'Error.html', {
-            'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the '
-                     'Plate Layout page.',
-        })
+         return render(request, 'Error.html', {
+             'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the '
+                      'Plate Layout page.',
+         })
 
 
 def create_graph(dictionary):
@@ -1058,17 +1059,20 @@ def Intermediate_result(request):
         temp2 = []
         temp3 = []
         temp4 = []
+        mod_check_colum1 = int(column_standard[0]) - 1
+        mod_check_colum2 = int(column_standard[1]) - 1
+        row_check = 0
         for key, values in end_result.items():
             mean_ST_dictionary[key].reverse()
             top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
             bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
             if len(seprate_dilution) != 0:
                 for sep in seprate_dilution[0]:
-                    if sep == key[key.index("plate"):key.index("plate") + 7] or key[key.index("plate"):key.index("plate") + 8]:
+                    if sep == key[key.index("plate"):key.index("plate") + 7] or sep == key[key.index("plate"):key.index("plate") + 8] or sep == key[key.index("plate"):key.index("plate") + 9]:
                         string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
                         string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
                 for sep in seprate_dilution[1]:
-                    if sep == key[key.index("plate"):key.index("plate") + 7] or key[key.index("plate"):key.index("plate") + 8]:
+                    if sep == key[key.index("plate"):key.index("plate") + 7] or sep == key[key.index("plate"):key.index("plate") + 8] or sep == key[key.index("plate"):key.index("plate") + 9]:
                         string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
                         string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
             elif len(dilution) == 1:
@@ -1076,41 +1080,48 @@ def Intermediate_result(request):
                 string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
             else:
                 for d in range(len(dilution)):
-                    if dilution[d][0][0] == key[key.index("plate"):key.index("plate") + 7] or key[key.index("plate"):key.index("plate") + 8]:
+                    if dilution[d][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or dilution[d][0][0].lower() == key[key.index("plate"):key.index("plate") + 8] or dilution[d][0][0].lower() == key[key.index("plate"):key.index("plate") + 9]:
                         string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
                         string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
             count_mod = 0
+            count_mod2 = 0
+            row_check += 1
             for value in values:
-                if count_mod == 10:
-                   count_mod = 0
-                if count_mod < 5 or elisa_type == '2':
-                    if type(value[1]) == str:
-                        if len(value) == 2:
-                            if float(value[1]) < bot:
-                                temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
+                if row_check != int(row_standard):
+                    if count_mod == 12:
+                       count_mod = 0
+                       count_mod2 = 0
+                    if elisa_type == '2':
+                        count_mod2 = 0
+                    if count_mod != int(mod_check_colum1) and count_mod != int(mod_check_colum2) and count_mod2 < 5 or int(row_standard) != 0 and count_mod2 < 5:
+                        count_mod2 += 1
+                        if type(value[1]) == str:
+                            if len(value) == 2:
+                                if float(value[1]) < bot:
+                                    temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
+                                else:
+                                    temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
                             else:
-                                temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
+                                value[2] = 1
+                                temp0.append(value[:3])
+                        elif int(value[1]) <= float(string_bot):
+                            if len(value) == 2:
+                                temp1.append(value + ['below'])
+                            else:
+                                value[2] = 1
+                                temp1.append(value[:3])
+                        elif int(value[1]) >= float(string_top):
+                            if len(value) == 2:
+                                temp3.append(value + ['above'])
+                            else:
+                                value[2] = 3
+                                temp3.append(value[:3])
                         else:
-                            value[2] = 1
-                            temp0.append(value[:3])
-                    elif int(value[1]) <= float(string_bot):
-                        if len(value) == 2:
-                            temp1.append(value + ['below'])
-                        else:
-                            value[2] = 1
-                            temp1.append(value[:3])
-                    elif int(value[1]) >= float(string_top):
-                        if len(value) == 2:
-                            temp3.append(value + ['above'])
-                        else:
-                            value[2] = 3
-                            temp3.append(value[:3])
-                    else:
-                        if len(value) == 2:
-                            temp2.append(value + ['linear'])
-                        else:
-                            value[2] = 2
-                            temp2.append(value[:3])
+                            if len(value) == 2:
+                                temp2.append(value + ['linear'])
+                            else:
+                                value[2] = 2
+                                temp2.append(value[:3])
                 count_mod += 1
             mean_ST_dictionary[key].reverse()
         sorted_temp1 = sorted(temp1, key=itemgetter(1))
@@ -1175,9 +1186,7 @@ def intermediate_list(key, params):
     """
     global intermediate_dictionary
     for options in range(len(totaal)):
-        num1 = int(''.join(filter(str.isdigit, key)))
-        num2 = int(''.join(filter(str.isdigit, totaal[options][0][0])))
-        if num1 == num2:
+        if totaal[options][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or totaal[options][0][0].lower() == key[key.index("plate"):key.index("plate") + 8] or totaal[options][0][0].lower() == key[key.index("plate"):key.index("plate") + 9]:
             position = options
     list1 = []
     count_plate = 0
@@ -1205,12 +1214,12 @@ def intermediate_list(key, params):
                                             result *= int(dilution[0][values + 1][value])
                                         else:
                                             for dil in range(len(dilution)):
-                                                if dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or key[key.index("plate"):key.index("plate") + 8]:
+                                                if dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 8] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 9]:
                                                     result *= int(dilution[dil][values+1][value])
                                     else:
                                         for d in range(len(seprate_dilution)):
                                             for g in seprate_dilution[d]:
-                                                if g == key[key.index("plate"):key.index("plate") + 7] or key[key.index("plate"):key.index("plate") + 8]:
+                                                if g == key[key.index("plate"):key.index("plate") + 7] or g == key[key.index("plate"):key.index("plate") + 8] or g == key[key.index("plate"):key.index("plate") + 9]:
                                                     result *= int(dilution[d][values+1][value])
 
                                     result = round(result, 3)
@@ -1273,8 +1282,6 @@ def End_results(request):
     global end_result
     global rule
     if request.method == 'POST':
-        if request.POST.get('Empty database'):
-            reset_data()
         if request.POST.get('download'):
             file_name = request.POST.get('File_name')
             textfile = open("../Download_files/" + file_name + ".txt", "w")
@@ -1387,9 +1394,24 @@ def End_results(request):
                                                     final_dictionary[sampleID] = end_variable
                                                 elif request.POST.get('update_table_S'):
                                                     rule = 3
-                                                    OD_multiplier = request.POST.get('reference')
-                                                    if (round(elements[1])) >= int(OD_multiplier):
-                                                        final_dictionary[sampleID] = end_variable
+                                                    OD_multiplier2 = request.POST.get('reference')
+                                                    if OD_multiplier == None:
+                                                        OD_multiplier = request.POST.get('OD_higher')
+                                                        if OD_multiplier != None:
+                                                            rule = '2 and 3'
+                                                            if (values[counter2][2]) - (
+                                                            values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                                if (round(elements[1])) >= int(OD_multiplier2):
+                                                                    final_dictionary[sampleID] = end_variable
+                                                    elif OD_multiplier != None:
+                                                        rule = '1 and 3'
+                                                        if (values[counter2][2]) / (
+                                                        values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                            if (round(elements[1])) >= int(OD_multiplier2):
+                                                                final_dictionary[sampleID] = end_variable
+                                                    else:
+                                                        if (round(elements[1])) >= int(OD_multiplier2):
+                                                            final_dictionary[sampleID] = end_variable
                                     if sampleID not in final_dictionary:
                                         if float(elements[1]) < float(lower):
                                             if elisa_type == '1':
