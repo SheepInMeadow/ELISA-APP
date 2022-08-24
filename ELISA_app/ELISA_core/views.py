@@ -1216,7 +1216,7 @@ def End_results(request):
             'elisa_type': elisa_type,
             'cut_off_type': cut_off_type,
         })
-    except KeyboardInterrupt:
+    except: #TODO should specify what error is encountered
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
         })
