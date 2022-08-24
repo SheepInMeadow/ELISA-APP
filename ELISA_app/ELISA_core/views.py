@@ -1,5 +1,4 @@
-import os
-from django.shortcuts import render
+from django.shortcuts import render, HttpResponse
 from .models import Plates
 import openpyxl
 import seaborn as sns
@@ -10,21 +9,21 @@ import scipy.optimize as optimization
 from matplotlib.ticker import ScalarFormatter
 import statistics
 from operator import itemgetter
-import xlrd
 import string
 import pickle
 from django.core import serializers
 from django.conf import settings
-from os.path import join
-from os import sep, listdir
+from os.path import join, getctime
+from os import sep, listdir, mkdir, remove
 from copy import deepcopy
-
-
-#Make multithreading safe
+import datetime
+import shutil
+from pathlib import Path
+# Make multithreading safe
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-version_number = 1.1
+version_number = 1.2
 
 def reset_data():
     #set globals
@@ -60,31 +59,31 @@ def reset_data():
     global column_standard; column_standard = [0, 0]
     global elisa_type; elisa_type = ''
     global cut_off_type; cut_off_type = ''
+    global divide_number; divide_number = 0
+    global seprate_dilution; seprate_dilution = []
+    global st_finder; st_finder = []
+    global dict_st; dict_st = {}
+    global list_st_values; list_st_values = []
+    global standard; standard = 0
+    global rule; rule = 'none'
+    global flow; flow = {}
+    global last_autosave; last_autosave = datetime.datetime(1970, 1, 1, 0, 0)
     #empty plates from db
     Plates.objects.all().delete()
     #empty pngs from images
     for file in listdir(get_mediapath()):
         if file.endswith('.png'):
-            os.remove(get_mediapath(file))
+            remove(get_mediapath(file))
     return
 
-def get_mediapath(extension=''):
-    mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
-    return mediapath
-#new globals
-seprate_dilution = []
-row_standard = 0
-unit_name = ''
-column_standard = [0, 0]
-divide_number = 0
-elisa_type = ''
-cut_off_type = ''
-st_finder = []
-dict_st = {}
-list_st_values = []
-standard = 0
-rule = 'none'
 
+def get_mediapath(extension=''):
+    try:
+        mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
+    except FileNotFoundError:
+        mkdir(join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images'))
+        mediapath = join(settings.BASE_DIR, 'ELISA_core' + sep + 'static' + sep + 'images' + sep + extension)
+    return mediapath
 
 def Home(request):
     """
@@ -95,11 +94,6 @@ def Home(request):
     Function:
         - Renders the template Home.html when the page is visited.
     """
-    if request.method == 'POST':
-        if request.POST.get('download_pickle'):
-            session_writeout("Manual Session")
-        elif request.POST.get('submit_pickle'):
-            session_readin(request.FILES['my_pickle'])
     return render(request, 'Home.html', {
             'version': version_number,
         })
@@ -121,6 +115,20 @@ def Input_data(request):
     """
     try:
         if request.method == 'POST':
+            #start pickle magic
+            if request.POST.get('download_pickle'):
+                session_writeout("Manual Session")
+                filename = request.POST.get('Session_name')
+                response = HttpResponse(open("Manual Session.ELISA_App", 'rb').read())
+                response['Content-Type'] = 'text/plain'
+                response['Content-Disposition'] = f'attachment; filename={filename}.ELISA_App'
+                return response
+            elif request.POST.get('submit_pickle'):
+                session_readin(request.FILES['my_pickle'])
+                return render(request, 'Input_data.html', {
+                    'check': "pickle_upload",
+                })
+            #end pickle magic
             error = 'correct'
             if request.POST.get('Empty database'):
                 reset_data()
@@ -144,7 +152,7 @@ def Input_data(request):
                 })
         else:
             return render(request, 'Input_data.html')
-    except:
+    except: #todo should really specify this
         return render(request, 'Input_data.html', {
             'check': 'false',
         })
@@ -361,13 +369,15 @@ def Plate_layout(request):
           After it will call the function plate_layout3() to get the new standart, then it save some variable that where
            submitted and render the page.
     """
-    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name, standard, cut_data
+    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name, standard, cut_data, flow
     if request.method == 'POST':
         if request.POST.get('file_submit'):
             elisa_type = request.POST.get('elisa_type')
             cut_off_type = request.POST.get('cut-off_type')
             row_standard = request.POST.get('row_input')
             column_standard = request.POST.get('column_input')
+            flow['Select data input type'] = {"1":"Modified/Non-modified ELISA", "2":"General ELISA"}["2"] #todo go for [elisa_type] and replace "2"
+            flow['Cut-off or no cut-off'] = {"1":"I want to use HDs to calculate a cut-off", "2":"I don’t want to calculate a cut-off"}[cut_off_type if cut_off_type != None else "1"]
             if row_standard == None:
                 row_standard = 0
             if column_standard == None:
@@ -384,6 +394,7 @@ def Plate_layout(request):
                     'cut_off_type': cut_off_type,
                 })
             excel_data = Plate_layout_1(request, "P")
+            flow["Plate Layout"] = excel_data #flowline
             totaal = Plate_layout_2(excel_data)
             check = 'go'
             return render(request, 'Plate_layout.html', {
@@ -407,6 +418,8 @@ def Plate_layout(request):
             Plate_layout_3(request)
             standard = request.POST.get('standaard')
             unit_name = request.POST.get('unit')
+            flow['ST values of all plates'] = request.POST.get('standaard')
+            flow['Divide number'] = request.POST.get('divide')
             check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal, 'check': check, 'row_input': row_standard,
@@ -445,7 +458,7 @@ def Plate_layout_1(request, check_type):
     for row in active_sheet.iter_rows():
         row_data = list()
         for cell in row:
-            if type(cell.value) == float:
+            if type(cell.value) == float: #todo look at this, is this needed?
                 row_data.append(str(round(cell.value)))
             else:
                 row_data.append(str(cell.value))
@@ -476,8 +489,8 @@ def Plate_layout_2(excel_data):
                 break
             else:
                 rows = tot_rows
-    for i in excel_data:
-        k = [e for e in i if e != ('None')]
+    for i in excel_data: #row
+        k = [e for e in i if e != ('None')] #per row append e if e isn't none
         if length_empty != 0 and len(k) != 0:
             for g in range(length_empty):
                 if k[0].isalpha():
@@ -515,7 +528,7 @@ def Plate_layout_3(request):
     list_st_int = []
     list_divide = []
     dict_st = {}
-    for index, i in enumerate(totaal):
+    for index, i in enumerate(totaal): #total is a global, function works cause total has a nested list which is mutable cause of python magic
         for j in range(len(i)):
             list_divide.append(values)
             list_st_str.append('st_' + str(j+1))
@@ -756,7 +769,7 @@ def Visualize_data(request):
             'dictionary': dictionary,
             'cut_off_type': cut_off_type,
     })
-    except:
+    except: #todo should specify this
          return render(request, 'Error.html', {
              'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the '
                       'Plate Layout page.',
@@ -819,6 +832,7 @@ def create_graph(dictionary):
         plt.savefig(get_mediapath(str(key) + ".png"))
         plt.close()
         counter += 1
+
 
 def formula(x, A, B, C, D, E):
     """
@@ -903,7 +917,7 @@ def Cut_off(request):
                 input1 = request.POST.get('input1')
                 input2 = request.POST.get('input2')
                 outlier_value = (float(input1) * mean) + (float(input2) * std)
-                outlier_value = round(outlier_value, 3)
+                outlier_value = round(outlier_value, 3) #TODO Flow for formula and outlier
                 new_y_list = []
                 for data in cut_data:
                     if data < outlier_value:
@@ -930,7 +944,7 @@ def Cut_off(request):
                 input3 = request.POST.get('input3')
                 input4 = request.POST.get('input4')
                 cut_off_value = (float(input3) * mean2) + (float(input4) * std2)
-                cut_off_value = round(cut_off_value, 3)
+                cut_off_value = round(cut_off_value, 3) #TODO Flow for formula and cut-off
                 return render(request, 'Cut_off.html', {
                     'mean': mean,
                     'std': std,
@@ -976,7 +990,7 @@ def Cut_off(request):
             df = pd.DataFrame(data=cut_dict)
             ax = sns.swarmplot(data=df, y="OD")
             ax = sns.boxplot(data=df, y="OD", color='white')
-            plt.savefig('ELISA_core/static/images/' + 'swarmplot.png')
+            plt.savefig(get_mediapath('swarmplot.png'))
             plt.close()
             return render(request, 'Cut_off.html', {
                 'mean': mean,
@@ -1167,11 +1181,12 @@ def Intermediate_result(request):
             'limit_list' : low_list,
             'check' : 'go_low'
         })
-    except:
+    except: #todo specify this
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
                      'your preferences on the visualize Data page.'
         })
+
 
 def intermediate_list(key, params):
     """
@@ -1283,203 +1298,204 @@ def End_results(request):
           is given an 1, if they are not met then the list gets an 0. After the list is filled and sorted
           the list is given to the render.
     """
-    #try:
-    global final_list
-    global cut_off_value_au
-    global final_dictionary
-    global end_result
-    global rule
-    OD_multiplier = 'None'
-    OD_multiplier2 = 'nothing'
-    if request.method == 'POST':
-        if request.POST.get('download'):
-            file_name = request.POST.get('File_name')
-            textfile = open("../Download_files/" + file_name + ".txt", "w")
-            for elements in final_list:
-                for element in elements:
-                    textfile.write(str(element) + "\t")
-                textfile.write("\n")
-            textfile.close()
-        if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
-                request.POST.get('update_table_S') or request.POST.get('update_table_No'):
-            final_dictionary = {}
-            OD_multiplier = request.POST.get('OD_multiplier')
-            first_value = list(end_result.values())[0]
-            if len(first_value[0]) == 2:
-                for keys, values in dictionary.items():
-                    if keys == HD:
-                        params = params_dictionary[HD]
-                        cut_off_value_au = formula2(float(cut_off_value), *params) * 1
-                    elif HD == 'None':
-                        cut_off_value_au = 0
-                    if keys not in delete:
-                        check_first_col = int(column_standard[0]) - 1
-                        check_second_col = int(column_standard[1]) - 1
+    try:
+        global final_list
+        global cut_off_value_au
+        global final_dictionary
+        global end_result
+        global rule
+        OD_multiplier = 'None'
+        OD_multiplier2 = 'nothing'
+        if request.method == 'POST':
+            if request.POST.get('download'):
+                file_name = request.POST.get('File_name')
+                textfile = open("../Download_files/" + file_name + ".txt", "w")
+                for elements in final_list:
+                    for element in elements:
+                        textfile.write(str(element) + "\t")
+                    textfile.write("\n")
+                textfile.close()
+            if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
+                    request.POST.get('update_table_S') or request.POST.get('update_table_No'):
+                final_dictionary = {}
+                OD_multiplier = request.POST.get('OD_multiplier')
+                first_value = list(end_result.values())[0]
+                if len(first_value[0]) == 2:
+                    for keys, values in dictionary.items():
+                        if keys == HD:
+                            params = params_dictionary[HD]
+                            cut_off_value_au = formula2(float(cut_off_value), *params) * 1
+                        elif HD == 'None':
+                            cut_off_value_au = 0
+                        if keys not in delete:
+                            check_first_col = int(column_standard[0]) - 1
+                            check_second_col = int(column_standard[1]) - 1
+                            counter = 0
+                            row = values[1:]
+                            if int(row_standard) != 0:
+                                non_mod_skip = 12 * int(row_standard)
+                            for OD_list in row:
+                                well = OD_list[0][0]
+                                plate_number = 1
+                                column = OD_list[1:]
+                                for OD in column:
+                                    if int(row_standard) != 0:
+                                        if counter < (non_mod_skip - 12) or counter >= non_mod_skip:
+                                            end_result[keys][counter].append(OD[0])
+                                            end_result[keys][counter].append(well)
+                                            end_result[keys][counter].append(plate_number)
+                                        counter += 1
+                                        plate_number += 1
+                                    else:
+                                        if counter == check_second_col:
+                                            check_first_col += 12
+                                            check_second_col += 12
+                                        elif counter != check_first_col:
+                                            end_result[keys][counter].append(OD[0])
+                                            end_result[keys][counter].append(well)
+                                            end_result[keys][counter].append(plate_number)
+                                        counter += 1
+                                        plate_number += 1
+                sampleID = 1
+                final_list = []
+                for keys, values in end_result.items():
+                    if keys != HD:
                         counter = 0
-                        row = values[1:]
-                        if int(row_standard) != 0:
-                            non_mod_skip = 12 * int(row_standard)
-                        for OD_list in row:
-                            well = OD_list[0][0]
-                            plate_number = 1
-                            column = OD_list[1:]
-                            for OD in column:
-                                if int(row_standard) != 0:
-                                    if counter < (non_mod_skip - 12) or counter >= non_mod_skip:
-                                        end_result[keys][counter].append(OD[0])
-                                        end_result[keys][counter].append(well)
-                                        end_result[keys][counter].append(plate_number)
-                                    counter += 1
-                                    plate_number += 1
+                        counter2 = 0
+                        mod_check_colum1 = int(column_standard[0]) - 1
+                        mod_check_colum2 = int(column_standard[1]) - 1
+                        for elements in values:
+                            if int(row_standard) != 0:
+                                non_mod_count = 6
+                                if elisa_type == '1':
+                                    non_mod_limit = 6
                                 else:
-                                    if counter == check_second_col:
-                                        check_first_col += 12
-                                        check_second_col += 12
-                                    elif counter != check_first_col:
-                                        end_result[keys][counter].append(OD[0])
-                                        end_result[keys][counter].append(well)
-                                        end_result[keys][counter].append(plate_number)
-                                    counter += 1
-                                    plate_number += 1
-            sampleID = 1
-            final_list = []
-            for keys, values in end_result.items():
-                if keys != HD:
-                    counter = 0
-                    counter2 = 0
-                    mod_check_colum1 = int(column_standard[0]) - 1
-                    mod_check_colum2 = int(column_standard[1]) - 1
-                    for elements in values:
-                        if int(row_standard) != 0:
-                            non_mod_count = 6
-                            if elisa_type == '1':
-                                non_mod_limit = 6
-                            else:
-                                non_mod_limit = 12
-                            non_mod_skip = 12 * int(row_standard)
-                            if counter2 < (non_mod_skip - 12) or counter2 >= non_mod_skip:
-                                non_mod_check = True
-                            else:
-                                non_mod_check = False
-                        elif int(row_standard) == 0:
-                            non_mod_count = 5
-                            if elisa_type == '1':
-                                non_mod_limit = 7
-                            else:
-                                non_mod_limit = 12
-                            if counter2 == mod_check_colum1:
-                                non_mod_check = False
-                            elif counter2 == mod_check_colum2:
-                                mod_check_colum1 += 12
-                                mod_check_colum2 += 12
-                                non_mod_check = False
-                            else:
-                                non_mod_check = True
-                        if elements[0] != 'Empty':
-                            if counter < non_mod_limit:
-                                if non_mod_check:
-                                    if float(elements[1]) >= float(lower):
-                                        if float(elements[1]) <= float(upper):
-                                            if elements[1] >= float(cut_off_value_au):
-                                                if elisa_type == '1':
-                                                    end_variable = [keys, values[counter2][4],
-                                                                    values[counter2][3], str(elements[0]), 1,
-                                                                    round(elements[1]), values[counter2][2],
-                                                                    values[counter2 + non_mod_count][2]]
-                                                else:
-                                                    end_variable = [keys, values[counter2][4],
-                                                                    values[counter2][3], str(elements[0]), 1,
-                                                                    round(elements[1]), values[counter2][2]]
-                                                if request.POST.get('update_table_M'):
-                                                    rule = 1
-                                                    OD_multiplier = request.POST.get('OD_multiplier')
-                                                    if (values[counter2][2])/(values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
-                                                        final_dictionary[sampleID] = end_variable
-                                                elif request.POST.get('update_table_H'):
-                                                    rule = 2
-                                                    OD_multiplier = request.POST.get('OD_higher')
-                                                    if (values[counter2][2]) - (values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
-                                                        final_dictionary[sampleID] = end_variable
-                                                elif request.POST.get('update_table_No'):
-                                                    rule = 4
-                                                    final_dictionary[sampleID] = end_variable
-                                                elif request.POST.get('update_table_S'):
-                                                    rule = 3
-                                                    OD_multiplier = request.POST.get('OD_multiplier')
-                                                    OD_multiplier2 = request.POST.get('reference')
-                                                    if OD_multiplier == '':
+                                    non_mod_limit = 12
+                                non_mod_skip = 12 * int(row_standard)
+                                if counter2 < (non_mod_skip - 12) or counter2 >= non_mod_skip:
+                                    non_mod_check = True
+                                else:
+                                    non_mod_check = False
+                            elif int(row_standard) == 0:
+                                non_mod_count = 5
+                                if elisa_type == '1':
+                                    non_mod_limit = 7
+                                else:
+                                    non_mod_limit = 12
+                                if counter2 == mod_check_colum1:
+                                    non_mod_check = False
+                                elif counter2 == mod_check_colum2:
+                                    mod_check_colum1 += 12
+                                    mod_check_colum2 += 12
+                                    non_mod_check = False
+                                else:
+                                    non_mod_check = True
+                            if elements[0] != 'Empty':
+                                if counter < non_mod_limit:
+                                    if non_mod_check:
+                                        if float(elements[1]) >= float(lower):
+
+                                            if float(elements[1]) <= float(upper):
+                                                if elements[1] >= float(cut_off_value_au):
+                                                    if elisa_type == '1':
+                                                        end_variable = [keys, values[counter2][4],
+                                                                        values[counter2][3], str(elements[0]), 1,
+                                                                        round(elements[1]), values[counter2][2],
+                                                                        values[counter2 + non_mod_count][2]]
+                                                    else:
+                                                        end_variable = [keys, values[counter2][4],
+                                                                        values[counter2][3], str(elements[0]), 1,
+                                                                        round(elements[1]), values[counter2][2]]
+                                                    if request.POST.get('update_table_M'):
+                                                        rule = 1
+                                                        OD_multiplier = request.POST.get('OD_multiplier')
+                                                        if (values[counter2][2])/(values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                            final_dictionary[sampleID] = end_variable
+                                                    elif request.POST.get('update_table_H'):
+                                                        rule = 2
                                                         OD_multiplier = request.POST.get('OD_higher')
-                                                        if OD_multiplier != '':
-                                                            rule = '2 and 3'
-                                                            if (values[counter2][2]) - (
+                                                        if (values[counter2][2]) - (values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                            final_dictionary[sampleID] = end_variable
+                                                    elif request.POST.get('update_table_No'):
+                                                        rule = 4
+                                                        final_dictionary[sampleID] = end_variable
+                                                    elif request.POST.get('update_table_S'):
+                                                        rule = 3
+                                                        OD_multiplier = request.POST.get('OD_multiplier')
+                                                        OD_multiplier2 = request.POST.get('reference')
+                                                        if OD_multiplier == '':
+                                                            OD_multiplier = request.POST.get('OD_higher')
+                                                            if OD_multiplier != '':
+                                                                rule = '2 and 3'
+                                                                if (values[counter2][2]) - (
+                                                                values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                                    if (round(elements[1])) >= int(OD_multiplier2):
+                                                                        final_dictionary[sampleID] = end_variable
+                                                        elif OD_multiplier != None:
+                                                            rule = '1 and 3'
+                                                            if (values[counter2][2]) / (
                                                             values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
                                                                 if (round(elements[1])) >= int(OD_multiplier2):
                                                                     final_dictionary[sampleID] = end_variable
-                                                    elif OD_multiplier != None:
-                                                        rule = '1 and 3'
-                                                        if (values[counter2][2]) / (
-                                                        values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                        else:
                                                             if (round(elements[1])) >= int(OD_multiplier2):
                                                                 final_dictionary[sampleID] = end_variable
-                                                    else:
-                                                        if (round(elements[1])) >= int(OD_multiplier2):
-                                                            final_dictionary[sampleID] = end_variable
-                                    if sampleID not in final_dictionary:
-                                        if float(elements[1]) < float(lower):
-                                            if elisa_type == '1':
-                                                final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
-                                                                          str(elements[0]), 0, '<' + str(lower),
-                                                                          values[counter2][2], values[counter2 + non_mod_count][2]]
-                                            else:
-                                                final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                              values[counter2][3],
+                                        if sampleID not in final_dictionary:
+                                            if float(elements[1]) < float(lower):
+                                                if elisa_type == '1':
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
                                                                               str(elements[0]), 0, '<' + str(lower),
-                                                                              values[counter2][2]]
-                                        elif float(elements[1]) >= float(upper):
-                                            if elisa_type == '1':
-                                                final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
-                                                                          str(elements[0]), 1, '>' + str(upper),
-                                                                          values[counter2][2], values[counter2 + non_mod_count][2]]
-                                            else:
-                                                final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                              values[counter2][3],
-                                                                              str(elements[0]), 1, '>' + str(upper),
-                                                                              values[counter2][2]]
-                                        else:
-                                            if elisa_type == '1':
-                                                final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
-                                                                              str(elements[0]), 0, round(float(elements[1])),
                                                                               values[counter2][2], values[counter2 + non_mod_count][2]]
+                                                else:
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4],
+                                                                                  values[counter2][3],
+                                                                                  str(elements[0]), 0, '<' + str(lower),
+                                                                                  values[counter2][2]]
+                                            elif float(elements[1]) >= float(upper):
+                                                if elisa_type == '1':
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
+                                                                              str(elements[0]), 1, '>' + str(upper),
+                                                                              values[counter2][2], values[counter2 + non_mod_count][2]]
+                                                else:
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4],
+                                                                                  values[counter2][3],
+                                                                                  str(elements[0]), 1, '>' + str(upper),
+                                                                                  values[counter2][2]]
                                             else:
-                                                final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                              values[counter2][3],
-                                                                              str(elements[0]), 0,
-                                                                              round(float(elements[1])),
-                                                                              values[counter2][2]]
-                            sampleID += 1
-                        counter += 1
-                        counter2 += 1
-                        if counter == 12:
-                            counter = 0
-            for i, lists in final_dictionary.items():
-                final_list.append(lists)
-            final_list = sorted(final_list, key=itemgetter(3))
-    return render(request, 'End_results.html', {
-        'final_list': final_list,
-        'upper': upper,
-        'lower': lower,
-        'cut_off_value': round(cut_off_value_au),
-        'rule': rule,
-        'rule_value' : OD_multiplier,
-        'rule_value2' : OD_multiplier2,
-        'unit': unit_name,
-        'elisa_type': elisa_type,
-        'cut_off_type': cut_off_type,
-    })
-    # except:
-    #     return render(request, 'Error.html', {
-    #         'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
-    #     })
+                                                if elisa_type == '1':
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
+                                                                                  str(elements[0]), 0, round(float(elements[1])),
+                                                                                  values[counter2][2], values[counter2 + non_mod_count][2]]
+                                                else:
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4],
+                                                                                  values[counter2][3],
+                                                                                  str(elements[0]), 0,
+                                                                                  round(float(elements[1])),
+                                                                                  values[counter2][2]]
+                                sampleID += 1
+                            counter += 1
+                            counter2 += 1
+                            if counter == 12:
+                                counter = 0
+                for i, lists in final_dictionary.items():
+                    final_list.append(lists)
+                final_list = sorted(final_list, key=itemgetter(3))
+        return render(request, 'End_results.html', {
+            'final_list': final_list,
+            'upper': upper,
+            'lower': lower,
+            'cut_off_value': round(cut_off_value_au),
+            'rule': rule,
+            'rule_value' : OD_multiplier,
+            'rule_value2' : OD_multiplier2,
+            'unit': unit_name,
+            'elisa_type': elisa_type,
+            'cut_off_type': cut_off_type,
+        })
+    except:
+        return render(request, 'Error.html', {
+            'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
+        })
 
 
 def session_writeout(session_name):  # Note: currently used pickle version = 4, supported from py 3.4 and default from py 3.8
@@ -1492,6 +1508,7 @@ def session_writeout(session_name):  # Note: currently used pickle version = 4, 
                      unit_name, row_standard, column_standard, elisa_type, cut_off_type,
                      serializers.serialize("xml", Plates.objects.all())), f, protocol=4)  # Plates.objects is serialized to xml, preventing upgrading issues with Django
         print("pickle success")
+        f.close()
 
 
 def session_readin(session):
@@ -1513,3 +1530,84 @@ def session_readin(session):
         Plates.objects.all().delete()
         for plate in serializers.deserialize("xml", sessiontuple[-1]):
             plate.save()
+
+
+def autosave(minutes_between_saves = 5): #path here is the directory path, Path refers to the resolve lib, should probably rename the import?
+    global last_autosave
+    time = datetime.datetime.now()
+    if (time - last_autosave).seconds / 60 >= minutes_between_saves:
+        last_autosave = time
+        path = join(Path(settings.BASE_DIR).resolve().parent, "Autosaves")
+        dircontents = listdir(path)
+        session_writeout(time.strftime(join("Autosaves", "Autosave %d-%m-%Y  %H.%M.%S")))
+        if len(dircontents) > 5:
+            remove(min([join(path, session) for session in dircontents], key=getctime)) #Get the oldest file in the dir and remove it
+
+
+def report_writeout():
+    #todo stuff for better report function visualisation, not finished
+    """
+    global flow
+    print([_.id for _ in Plates.objects.all()]) # Inserted Plates Names
+    for i in flow["ModifiedLayout"]:    #modified plates
+        for j in i:
+            for k in j:
+                print(k, "\t", sep='', end='')
+            print(end="\n")
+    for i in flow["PureLayout"]:    #unmodified plates
+        for j in i:
+            print(j, "\t", sep='', end='')
+        print(end="\n")
+    for i in dilution: #dilution table
+        for j in i:
+            for k in j:
+                print(k, "\t", sep='', end='')
+            print(end="\n")
+    for key, value in dictionary.items():
+        print(key)
+        for i in value:  # modified plates
+            for j in i:
+                for k in j:
+                    print(k, "\t", sep='', end='')
+                print(end="\n")
+    print(HD) #Selected Healthy Donor
+    for i in delete: #Plates to be excluded
+        print(i)
+
+    for key, value in flow.items():
+        print(key)
+        print(value)
+    """
+    #Create directory, checking for uniqueness
+    dirpath = join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
+    unique, iterations = False, 1
+    while not unique:
+        try:
+            mkdir(dirpath)
+            unique = True
+        except FileExistsError:
+            print("FileExistsError raised")
+            iterations += 1
+            dirpath = (dirpath.split(" (")[0] + f" ({iterations})")
+
+    #Save images
+    for file in listdir(get_mediapath()):
+        if file.endswith('.png'):
+            shutil.copy2(get_mediapath(file), dirpath)
+
+    #Save end results
+    with open(join(dirpath, "end_results.txt"), "w") as f:
+        f.write(f"Plate name\t"
+                f"Plate number\t"
+                f"Well number\t"
+                f"Sample ID\t"
+                f"Positive (1) or Negative (0)\t"
+                f"{unit_name}\t"
+                f"OD of mod-peptide\t"
+                f"OD of non-mod-peptide\n")
+        for elements in final_list:
+            for element in elements:
+                f.write(str(element) + "\t")
+            f.write("\n")
+        f.close()
+    return 0

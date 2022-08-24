@@ -7,6 +7,21 @@
     {% load static %}
     <link rel="stylesheet" type="text/css"
           href="{% static 'css/Input_data.css' %}">
+        {# START PICKLE MAGIC #}
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="input_text">Upload or Download session here:</div><br>
+        <input type="file" name="my_pickle" class="input_file"/>
+        <input type="submit" name="submit_pickle" value="Upload session" class="input_button_file"/>
+    </form>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="input_text">
+            Session name: <input type="text" name="Session_name" class="input" value="">
+            <input type="submit" value="Download session" name="download_pickle" class="button"><br><br><br>
+        </div>
+    </form>
+    {# END PICKLE MAGIC #}
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="input_text">Submit your data here:</div><br>
@@ -14,6 +29,12 @@
         <input type="submit" name="file_submit" value="Upload data" class="input_button_file"/>
         <input type="submit" value="Empty database" name="Empty database" class="input_button_file">
     </form>
+    {% if check == 'pickle_download' %}
+        <p class="message_succes">Session was successfully downloaded.</p>
+    {% endif %}
+    {% if check == 'pickle_upload' %}
+        <p class="message_succes">Session was successfully uploaded.</p>
+    {% endif %}
     {% if check == 'file' %}
         <p class="message_fail">No files were selected, please try again.</p>
     {% endif %}
