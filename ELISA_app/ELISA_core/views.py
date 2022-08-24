@@ -134,8 +134,13 @@ def Input_data(request):
                     'check': error,
                 })
             else:
+                data = Plates.objects.values()
+                temp = []
+                for i in data:
+                    name = i['id'].lower()
+                    temp.append(name)
                 return render(request, 'Input_data.html', {
-                    'check': 'correct',
+                    'check': 'correct', 'files': temp,
                 })
         else:
             return render(request, 'Input_data.html')
@@ -686,7 +691,10 @@ def Visualize_data(request):
         global HD
         global delete
         if request.method == 'POST':
-            HD = request.POST['HD']
+            if request.POST.get("Confirm1"):
+                HD = request.POST['HD']
+            elif request.POST.get("Confirm2"):
+                HD = 'None'
             bottom = request.POST.getlist('top')
             top = request.POST.getlist('bottom')
             counter = 0
@@ -1281,6 +1289,8 @@ def End_results(request):
     global final_dictionary
     global end_result
     global rule
+    OD_multiplier = 'None'
+    OD_multiplier2 = 'nothing'
     if request.method == 'POST':
         if request.POST.get('download'):
             file_name = request.POST.get('File_name')
@@ -1294,14 +1304,14 @@ def End_results(request):
                 request.POST.get('update_table_S') or request.POST.get('update_table_No'):
             final_dictionary = {}
             OD_multiplier = request.POST.get('OD_multiplier')
-            if len(end_result[HD][0]) == 2:
+            first_value = list(end_result.values())[0]
+            if len(first_value[0]) == 2:
                 for keys, values in dictionary.items():
                     if keys == HD:
                         params = params_dictionary[HD]
-                        if cut_off_type == '1':
-                            cut_off_value_au = formula2(float(cut_off_value), *params) * 1
-                        else:
-                            cut_off_value_au = 0
+                        cut_off_value_au = formula2(float(cut_off_value), *params) * 1
+                    elif HD == 'None':
+                        cut_off_value_au = 0
                     if keys not in delete:
                         check_first_col = int(column_standard[0]) - 1
                         check_second_col = int(column_standard[1]) - 1
@@ -1382,6 +1392,7 @@ def End_results(request):
                                                                     round(elements[1]), values[counter2][2]]
                                                 if request.POST.get('update_table_M'):
                                                     rule = 1
+                                                    OD_multiplier = request.POST.get('OD_multiplier')
                                                     if (values[counter2][2])/(values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
                                                         final_dictionary[sampleID] = end_variable
                                                 elif request.POST.get('update_table_H'):
@@ -1394,10 +1405,11 @@ def End_results(request):
                                                     final_dictionary[sampleID] = end_variable
                                                 elif request.POST.get('update_table_S'):
                                                     rule = 3
+                                                    OD_multiplier = request.POST.get('OD_multiplier')
                                                     OD_multiplier2 = request.POST.get('reference')
-                                                    if OD_multiplier == None:
+                                                    if OD_multiplier == '':
                                                         OD_multiplier = request.POST.get('OD_higher')
-                                                        if OD_multiplier != None:
+                                                        if OD_multiplier != '':
                                                             rule = '2 and 3'
                                                             if (values[counter2][2]) - (
                                                             values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
@@ -1458,6 +1470,8 @@ def End_results(request):
         'lower': lower,
         'cut_off_value': round(cut_off_value_au),
         'rule': rule,
+        'rule_value' : OD_multiplier,
+        'rule_value2' : OD_multiplier2,
         'unit': unit_name,
         'elisa_type': elisa_type,
         'cut_off_type': cut_off_type,

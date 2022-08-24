@@ -55,7 +55,7 @@
             </div>
             <div id="checkboxes">
                 Remove plate from calculations:<br>
-                <input type="checkbox" name="delete" value="{{ key }}">
+                <input type="checkbox" name="delete" value="{{ key }}" >
             </div>
         </div>
         <br><br><br><br><br><br><br><br><br><br><br><br><br><br>
@@ -67,14 +67,14 @@
             {% for key, value_list in dictionary.items %}
                 <option value="{{ key }}">{{ key }}</option>
             {% endfor %}
-            <input type="submit" value="Confirm" id="spacing">
+            <input type="submit" value="Confirm" id="spacing" name="Confirm1">
         </select>
     </div>
     {% endif %}
     {% if cut_off_type == '2' %}
     <div id="Healthydonor">
         Submit your options
-        <input type="submit" value="Confirm" id="spacing">
+        <input type="submit" value="Confirm" id="spacing" name="Confirm2">
     </div>
     {% endif %}
 </form>
