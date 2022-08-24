@@ -1535,12 +1535,12 @@ def autosave(minutes_between_saves = 5): #path here is the directory path, Path 
         last_autosave = time
         path = join(Path(settings.BASE_DIR).resolve().parent, "Autosaves")
         dircontents = listdir(path)
-        session_writeout(time.strftime(join("Autosaves", "Autosave %d-%m-%Y  %H.%M.%S")))
+        session_writeout(time.strftime(join(settings.BASE_DIR, "Autosaves", "Autosave %d-%m-%Y  %H.%M.%S")))
         if len(dircontents) > 5:
             remove(min([join(path, session) for session in dircontents], key=getctime)) #Get the oldest file in the dir and remove it
 
 
-def report_writeout():
+def report_writeout(dirname):
     #todo stuff for better report function visualisation, not finished
     """
     global flow
@@ -1575,7 +1575,9 @@ def report_writeout():
         print(value)
     """
     #Create directory, checking for uniqueness
-    dirpath = join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
+    landing = join(settings.BASE_DIR, "temp", dirname)    #join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
+    target = join(settings.BASE_DIR, "temp", "targetdir")
+    """
     unique, iterations = False, 1
     while not unique:
         try:
@@ -1585,14 +1587,14 @@ def report_writeout():
             print("FileExistsError raised")
             iterations += 1
             dirpath = (dirpath.split(" (")[0] + f" ({iterations})")
-
+    """
     #Save images
     for file in listdir(get_mediapath()):
         if file.endswith('.png'):
-            shutil.copy2(get_mediapath(file), dirpath)
+            shutil.copy2(get_mediapath(file), target)
 
     #Save end results
-    with open(join(dirpath, "end_results.txt"), "w") as f:
+    with open(join(target, "end_results.txt"), "w") as f:
         f.write(f"Plate name\t"
                 f"Plate number\t"
                 f"Well number\t"
