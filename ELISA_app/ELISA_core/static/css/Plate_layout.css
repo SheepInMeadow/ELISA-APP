@@ -21,7 +21,6 @@
 }
 
 .plate_st_text {
-    margin-left: 2%;
     font-size: 20px;
     font-family: "Arial", serif;
 }
@@ -69,7 +68,16 @@ td {
 }
 .input {
     width: 100%;
-    background-color: red;
+    font-size: 21px;
+    font-family: "Arial", serif;
+}
+
+.column_input{
+    font-size: 21px;
+    font-family: "Arial", serif;
+}
+
+.row_input{
     font-size: 21px;
     font-family: "Arial", serif;
 }

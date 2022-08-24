@@ -50,4 +50,11 @@
     {% if check == 'false' %}
         <p class="message_fail">Input was not properly formatted, please try again.</p>
     {% endif %}
+    <table>
+        {% for i in files %}
+            <tr>
+                <td>{{i}}</td>
+            </tr>
+        {% endfor %}
+    </table>
 {% endblock %}

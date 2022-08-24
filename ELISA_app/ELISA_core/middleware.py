@@ -13,3 +13,4 @@ class AutosaveMiddleware:
         if request.path_info != '/':
             autosave(minutes_between_saves=0.5)
         pass
+        

@@ -13,7 +13,7 @@ import string
 import pickle
 from django.core import serializers
 from django.conf import settings
-from os.path import join, getctime
+from os.path import join, getctime, exists
 from os import sep, listdir, mkdir, remove
 from copy import deepcopy
 import datetime
@@ -55,10 +55,16 @@ def reset_data():
     global final_list; final_list = []
     global cut_off_value_au; cut_off_value_au = 0
     global unit_name; unit_name = ''
-    global row_standard; row_standard = ''
-    global column_standard; column_standard = ''
+    global row_standard; row_standard = '0'
+    global column_standard; column_standard = [0, 0]
     global elisa_type; elisa_type = ''
     global cut_off_type; cut_off_type = ''
+    global divide_number; divide_number = 0
+    global st_finder; st_finder = []
+    global dict_st; dict_st = {}
+    global list_st_values; list_st_values = []
+    global standard; standard = 0
+    global rule; rule = 'none'
     global flow; flow = {}
     global last_autosave; last_autosave = datetime.datetime(1970, 1, 1, 0, 0)
     #empty plates from db
@@ -135,8 +141,13 @@ def Input_data(request):
                     'check': error,
                 })
             else:
+                data = Plates.objects.values()
+                temp = []
+                for i in data:
+                    name = i['id'].lower()
+                    temp.append(name)
                 return render(request, 'Input_data.html', {
-                    'check': 'correct',
+                    'check': 'correct', 'files': temp,
                 })
         else:
             return render(request, 'Input_data.html')
@@ -330,33 +341,56 @@ def Plate_layout(request):
         - request: Catches submits from template.
         - totaal: An empty list.
         - check: An empty string.
+        - row_standard: A string with only one 0
+        - column_standard: A list with two zero's
+        - elisa_type: An empty string
+        - cut_off_type: An empty string
+        - unit_name: An empty string
+        - standard: An 0
     Output:
         - totaal: A nested list with submitted data from a plate layout file.
         - check: A variable that is used to check if the data is properly read and ready to be formatted into a table.
+        - row_standard: A string with as value a number telling which row contains the ST values
+        - column_standard: A list with as values numbers telling which columns contain the ST values
+        - elisa_type: An string with the numbers 1 or 2.
+        - cut_off_type: An string with the numbers 1 or 2.
+        - unit_name: An string with it the submitted value
+        - standard: An number with it the submitted value
     Function:
-        - This function checks if the user has submitted a plate layout file. If they did not the page will be rendered
+        - This function checks if the user has submitted a plate layout file. It first load in the submitted values from the page
+          and save them in global variables. After it will check if some of those variables are empty to check if they are equal to None.
+          If they are then the variable gets replaced with a zero for column if it was not equal to zero then it gets
+          split so the submitted value becomes a list. Then it checks If they submitted a file, if they did not the page will be rendered
           with an error message telling the user to select a file. If the user did select and submit a file it will be
           passed onto the Plate_layout_1() en Plate_layout_2() function. Afterwards it will rerender the page and
-          generate a table containing the data from the file. If the user then fills in the input field and submits
-          this value by clicking the button, it will reload the page and automatically fill in the ST values from top
-          to bottom. If no button was pressed the template simply renders with only the file input field and submit
-          button.
+          generate a table containing the data from the file. If no file was submitted it will check if the button standart_input
+          was pressed. if so then first it wil load in the submitted values from the page and save them in global variables.
+          After it will call the function plate_layout3() to get the new standart, then it save some variable that where
+           submitted and render the page.
     """
-    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name, flow
+    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name, standard, cut_data, flow
     if request.method == 'POST':
-        elisa_type = request.POST.get('elisa_type')
-        cut_off_type = request.POST.get('cut-off_type')
-        flow['Select data input type'] = {"1":"Modified/Non-modified ELISA", "2":"General ELISA"}["2"] #todo go for [elisa_type] and replace "2"
-        flow['Cut-off or no cut-off'] = {"1":"I want to use HDs to calculate a cut-off", "2":"I don’t want to calculate a cut-off"}[cut_off_type if cut_off_type != None else "1"]
-        if elisa_type == "1":
-            row_standard = request.POST.get('row_input') #TODO INCLUDE IN FLOW
-            column_standard = request.POST.get('column_input') #same as above
+        if request.POST.get('file_submit'):
+            elisa_type = request.POST.get('elisa_type')
+            cut_off_type = request.POST.get('cut-off_type')
+            row_standard = request.POST.get('row_input')
+            column_standard = request.POST.get('column_input')
+            flow['Select data input type'] = {"1":"Modified/Non-modified ELISA", "2":"General ELISA"}["2"] #todo go for [elisa_type] and replace "2"
+            flow['Cut-off or no cut-off'] = {"1":"I want to use HDs to calculate a cut-off", "2":"I don’t want to calculate a cut-off"}[cut_off_type if cut_off_type != None else "1"]
+            if row_standard == None:
+                row_standard = 0
+            if column_standard == None:
+                column_standard = [0, 0]
+            else:
+                column_standard = column_standard.split(',')
         if request.POST.get('file_submit'):
             totaal = []
             if request.FILES.getlist("my_file") == []:
                 check = 'error'
                 return render(request, 'Plate_layout.html', {
-                    'check': check, 'totaal': totaal,
+                    'check': check, 'totaal': totaal,'row_input': row_standard,
+                    'column_input': str(column_standard[0]) + ',' + str(column_standard[1]), 'elisa_type': elisa_type,
+                    'cut_off_type': cut_off_type,
                 })
             excel_data = Plate_layout_1(request, "P")
             flow["Plate Layout"] = excel_data #flowline
@@ -364,19 +398,41 @@ def Plate_layout(request):
             check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal,
-                'check': check,
+                'check': check,'row_input': row_standard,
+                'column_input': str(column_standard[0]) + ',' + str(column_standard[1]), 'elisa_type': elisa_type,
+                    'cut_off_type': cut_off_type,
             })
         if request.POST.get('standaard_input'):
+            cut_data = []
+            elisa_type = request.POST.get('elisa_type')
+            cut_off_type = request.POST.get('cut-off_type')
+            row_standard = request.POST.get('row_input')
+            column_standard = request.POST.get('column_input')
+            if row_standard == None:
+                row_standard = 0
+            if column_standard == None:
+                column_standard = [0, 0]
+            else:
+                column_standard = column_standard.split(',')
             Plate_layout_3(request)
+            standard = request.POST.get('standaard')
             unit_name = request.POST.get('unit')
             flow['ST values of all plates'] = request.POST.get('standaard')
             flow['Divide number'] = request.POST.get('divide')
             check = 'go'
             return render(request, 'Plate_layout.html', {
-                'totaal': totaal, 'check': check, })
+                'totaal': totaal, 'check': check, 'row_input': row_standard,
+                'column_input': str(column_standard[0]) + ',' + str(column_standard[1]),
+                'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
+                    'cut_off_type': cut_off_type,
+            })
     else:
         return render(request, 'Plate_layout.html', {
-            'totaal': totaal, 'check': check, })
+            'totaal': totaal, 'check': check, 'row_input': row_standard,
+            'column_input': str(column_standard[0]) + ',' + str(column_standard[1]),
+            'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
+                    'cut_off_type': cut_off_type,
+        })
 
 
 def Plate_layout_1(request, check_type):
@@ -457,41 +513,64 @@ def Plate_layout_3(request):
     Input:
         - request: Catches submits from template.
     Output:
-        -
+        - divide_number: in this varibale comes a divide number the user submitted
+        - dict_st:
     Function:
         - This function retrieves the submitted ST value the user inputted. This value is then used and divided by two
           for every row in the plate layout file. The last row get a # as value since these values are supposed to be
           zero. When clicking the submit button the page gets reloaded and the table gets filled, so there is no return.
     """
+    global divide_number, st_finder, dict_st, list_st_values
     values = request.POST.get('standaard')
     divide_number = request.POST.get('divide')
-    list_st = []
+    list_st_str = []
+    list_st_int = []
     list_divide = []
-    for i in totaal: #total is a global, function works cause total has a nested list which is mutable cause of python magic
+    dict_st = {}
+    for index, i in enumerate(totaal): #total is a global, function works cause total has a nested list which is mutable cause of python magic
         for j in range(len(i)):
             list_divide.append(values)
-            list_st.append('st_' + str(j+1))
+            list_st_str.append('st_' + str(j+1))
+            list_st_int.append(round(float(values), 3))
+            if 'st_' + str(j+1) not in dict_st and len(list_st_values) == 0:
+                dict_st['st_' + str(j+1)] = []
+            elif len(list_st_values) != 0:
+                if len(dict_st) <= 7:
+                    if list_st_values[j] not in dict_st:
+                        dict_st[str(list_st_values[j])] = []
             values = float(values) / float(divide_number)
         for j in range(len(i)):
             for k in range(len(i[j])):
                 for d in range(len(i)):
-                    if i[j][k] == list_st[d]:
+                    if str(i[j][k]).lower() == list_st_str[d]:
+                        dict_st[i[j][k].lower()].append([index, j, k])
+                        if index == 0 and str(i[j][k]).lower() == 'st_1':
+                            st_finder = [0, j, k]
                         i[j][k] = round(float(list_divide[d]), 3)
                     elif i[j][k] == 'Blank':
                         i[j][k] = "#"
+                    elif len(list_st_values) != 0:
+                        if d <= 7:
+                            if str(i[j][k]) == str(list_st_values[d]):
+                                dict_st[str(i[j][k])].append([index, j, k])
+                                i[j][k] = round(float(list_divide[d]), 3)
+    list_st_values = deepcopy(list_st_int[:8])
 
 
 def Dilutions(request):
     """
     Input:
         - request: Catches submit from template.
-        - end_dilution: An empty list
+        - seprate_dilution: An empty list
     Output:
-        - end_dilution: A nested list with the dilution of the plate. The values are all numbers with as type string.
+        - dilution: A nested list with the dilution of the plate. The values are all numbers with as type string.
+        - seprate_dilution: A nested list with the names of plates
     Function:
-        - the function checks if the dilution is submitted and creates header lists for the nested list end_dilution.
-          The function Dilutions_1 is called and given multiple variables. The returned list is added to the nested
-          list and returned to the template.
+        - The function checks if a file is submitted, if so then it gives it to other functions in order to read it.
+          Then it changes a function to 'go' to allow it to be shown on the website. Then it checks of dilution only has 1
+          plate or more and if its more is it the same size as plate layout.
+          the function also checks if the user submitted the options so combine plate names with one dilution file. then
+          it checks if the user submitted another file inorder to add it to the dilution variable.
     """
     global dilution, check2, seprate_dilution
     show = 'no'
@@ -553,15 +632,15 @@ def Dilutions_1(excel_data):
     global dilution
     """
     Input:
-        - i: An integer which ranges from one to eight.
-        - temp: An empty list
-        - row_names: A list with the first letter each row needs.
-        - dilution: The dilution value.
+        - excel_data: A nested list with the data from a plate layout file.
     Output:
-        - temp: A list with the dilution values of a row. The values are all numbers with as type string.
+        - dilution: A nested list with the data from a dilution file that is properly formatted and stripped of
+          None's.
     Function:
-        - The function decides which value gets added to the temp list. A total of 13 strings are added to the temp
-          list.
+        - This function reads every line in the nested list excel_data, determines the max rows per plate
+          and deletes all the None's then inserts values so the lists have the same length.
+          Finally it appends the formatted lists to the nested totaal list and
+          returns this nested list to the Dilution() function.
     """
     temp, counter = [], 0
     length_empty = 0
@@ -624,7 +703,10 @@ def Visualize_data(request):
         global HD
         global delete
         if request.method == 'POST':
-            HD = request.POST['HD']
+            if request.POST.get("Confirm1"):
+                HD = request.POST['HD']
+            elif request.POST.get("Confirm2"):
+                HD = 'None'
             bottom = request.POST.getlist('top')
             top = request.POST.getlist('bottom')
             counter = 0
@@ -637,7 +719,7 @@ def Visualize_data(request):
         nested = []
         temp = []
         for i in data:
-            name = i['id']
+            name = i['id'].lower()
             lines = i['data'].split('=')[:-1]
             number1 = lines[106].replace(',', '.')
             number2 = lines[107].replace(',', '.')
@@ -645,13 +727,14 @@ def Visualize_data(request):
             mean = round(calculation, 3)
             max = 0.0
             new_lines = []
-            for k in lines[:14]:
+            position = lines.index("A")
+            for k in lines[:position]:
                 new_lines.append(k)
-            for index, x in enumerate(lines[14:]):
+            for index, x in enumerate(lines[position:]):
                 if x.isdigit():
                     x = str(float(x))
                 new_lines.append(x)
-            for x in new_lines[14:]:
+            for x in new_lines[position:]:
                 if x[0].isdigit():
                     if float(x) > max:
                         max = float(x)
@@ -683,12 +766,13 @@ def Visualize_data(request):
             create_graph(dictionary)
         return render(request, 'Visualize_data.html', {
             'dictionary': dictionary,
-        })
-    except KeyboardInterrupt:
-        return render(request, 'Error.html', {
-            'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the '
-                     'Plate Layout page.',
-        })
+            'cut_off_type': cut_off_type,
+    })
+    except: #todo should specify this
+         return render(request, 'Error.html', {
+             'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the '
+                      'Plate Layout page.',
+         })
 
 
 def create_graph(dictionary):
@@ -704,20 +788,28 @@ def create_graph(dictionary):
           value consists of a list calculated average ST values of each row. This data is then used to create each
           graph.
     """
-    conc = totaal[0][2][1]
+    global mean_ST_dictionary
+    conc = totaal[st_finder[0]][st_finder[1]][st_finder[2]]
     x_list = [conc]
     for i in range(6):
-        conc = float(conc)/2
+        conc = float(conc)/int(divide_number)
         x_list.append(conc)
     y_list = []
     temp = []
+    count_plate = 0
     for values in dictionary.values():
-        for elements in values[1:-1]:
-            mean = ((float(elements[1][0]) + float(elements[2][0]))/2)
-            temp.append(round(mean, 3))
+        for elements in dict_st.values():
+            if len(elements) != 0:
+                pos1 = elements[count_plate][1]
+                pos2 = elements[count_plate][2]
+                pos3 = elements[count_plate+1][1]
+                pos4 = elements[count_plate+1][2]
+                mean = ((float(values[pos1-1][pos2][0]) + float(values[pos3-1][pos4][0]))/2)
+                temp.append(round(mean, 3))
+        count_plate += 2
+        temp.pop()
         y_list.append(temp)
         temp = []
-    global mean_ST_dictionary
     counter = 0
     for keys in dictionary:
         mean_ST_dictionary[keys] = y_list[counter]
@@ -767,9 +859,13 @@ def Cut_off(request):
         - mean2: Has a zero number.
         - std2: Has a zero number.
         - cut_data: An empty list
+        - row_standard: A string with as value a number telling which row contains the ST values
+        - column_standard: A list with as values numbers telling which columns contain the ST values
         - check_cut_off: The string false
         - outlier_value: A float with zero
         - cut_off_value: A float with zero
+        - cut_off_type: A string with the number 1 or 2
+        - elisa_type: A string with the number 1 or 2
         - dictionary: A dictionary with as key the plate names and the value a nested list with in it the OD and RBG code.
         - HD: An string with the name of the selected healthy donor plate.
     Output:
@@ -783,7 +879,18 @@ def Cut_off(request):
         - outlier_value: A value with the outlier score
         - cut_off_value: A value with the cut-off value
     Function:
-        -This function checks if a button is pressed if not than it will create the first swarm plot for the outliers.
+        - This function starts by looking if cut_off_type is equal to 2, if so that means the user did,t want a cutt off
+         so an error page is render with the text that the user did not want a cut off. then it checks if a button is
+         pressed if not than it will create the first swarm plot for the outliers. This is done by looking which type of
+         analysis this is, is it type 1 then it contains mod/non-mods so the data needs to be filtered for it. in order to
+         do that it needs to look at the row_standard to see if the variable is equal to zero. if so than that means the ST values
+         are in the columns, if not then they are in the rows. if the row_standard is zero the function will check if the
+         value is not the same as the first or second position in column_standard. Because if they are the same then
+         that means that value is the ST value. count_the_mod wil check if the values are mod values if count_the_mod is
+         bigger than 5 that means the values are now the non-mod values. For the rows it checks if values is not the same
+         as row_standard and then checks if value is bigger than mod_lengths, if so then that means that value is a non-mod
+         value and isn't allowed in the data. all of this is the same for when elisa_type is equal to 2 but without the
+         count_the_mod, mod_length parts.
          When a button is pressed it will look into which button was pressed. IF the outlier_submit button was pressed.
          Then it will create the swarm plot for te cut-ff. If the button from cut_off_submit was pressed a cut-off is
          calculated.
@@ -797,7 +904,13 @@ def Cut_off(request):
         global check_cut_off
         global outlier_value
         global cut_off_value
+        global elisa_type
         cut_dict = {}
+        if cut_off_type == '2':
+            return render(request, 'Error.html', {
+                'error': 'The option to not use a cut-off was selected. Move on to intermediate result to continue'
+                         ' the application.'
+            })
         if request.method == 'POST':
             if request.POST.get('outlier_submit'):
                 input1 = request.POST.get('input1')
@@ -841,10 +954,35 @@ def Cut_off(request):
                     'cut_off_value': cut_off_value,
                 })
         elif cut_data == []:
-            for i in dictionary[HD][1:]:
-                for g in i[3:8]:
-                    cut_data.append(g[0])
-            cut_data.pop(0)
+            if elisa_type == '1':
+                for i, j in dictionary.items():
+                    if HD == i:
+                        for values in range(len(j)):
+                            count_the_mod = 0
+                            for value in range(len(j[values])):
+                                if type(j[values][value][0]) != str:
+                                    if int(row_standard) == 0:
+                                        if value != int(column_standard[0]):
+                                            if value != int(column_standard[1]):
+                                                if count_the_mod < 5:
+                                                    cut_data.append(j[values][value][0])
+                                                    count_the_mod += 1
+                                    elif int(row_standard) != values:
+                                        mod_length = len(j[values])/2
+                                        if value <= mod_length:
+                                            cut_data.append(j[values][value][0])
+            elif elisa_type == '2':
+                for i, j in dictionary.items():
+                    if HD == i:
+                        for values in range(len(j)):
+                            for value in range(len(j[values])):
+                                if type(j[values][value][0]) != str:
+                                    if int(row_standard) == 0:
+                                        if value != int(column_standard[0]):
+                                            if value != int(column_standard[1]):
+                                                cut_data.append(j[values][value][0])
+                                    elif int(row_standard) != values:
+                                        cut_data.append(j[values][value][0])
             cut_dict["OD"] = cut_data
             mean = round(statistics.mean(cut_data), 3)
             std = round(statistics.stdev(cut_data), 3)
@@ -900,6 +1038,7 @@ def Intermediate_result(request):
         - end_result: An empty dictionary.
         - lower: The number zero.
         - upper: The number zero.
+        - elisa_type: A string with the number 1 or 2
         - HD: An string with the name of the selected healthy donor plate.
         - points_dictionary: A dictionary with as key the name of the plate and as value a list of the chosen lower and
                             upper points of that plate.
@@ -915,10 +1054,12 @@ def Intermediate_result(request):
         - lower: An au/ml score from the lowest chosen value.
         - upper: An au/ml score from the highest chosen value.
     Function:
-        - The fuction first checks which plates it should not to be looking if the plate names in intermediate_dictionary
+        - The function first checks which plates it should not to be looking if the plate names in intermediate_dictionary
           are in delete. Then it looks if seprate_dilution is empty or not after this check top and bot will be filled
-          with the dilution belonging to that plate. After that
-          it will look if the values from end_result are smaller or bigger then lower or upper. If the value is smaller
+          with the dilution belonging to that plate. After that it will look if elisa_type is equal to 2 or smaller
+          then count_mod 5. this is done to filter out the non-mod values if needed.
+          if it passes the if-statements it will look if the values from end_result are smaller or bigger
+          then lower or upper. If the value is smaller
           than lower it gets a 1, if higher than upper it gets a 3. If nether than it gets a 2. When the list is filled
           it gets sorted by sample ID and everything gets put into one list. also two other list are made one with the
           last 20 of the below values and the first 20 of the linear values. and the other list with the 20 last of the
@@ -939,17 +1080,20 @@ def Intermediate_result(request):
         temp2 = []
         temp3 = []
         temp4 = []
+        mod_check_colum1 = int(column_standard[0]) - 1
+        mod_check_colum2 = int(column_standard[1]) - 1
+        row_check = 0
         for key, values in end_result.items():
             mean_ST_dictionary[key].reverse()
             top = mean_ST_dictionary[key][int(points_dictionary[key][1]) - 1]
             bot = mean_ST_dictionary[key][int(points_dictionary[key][0]) - 1]
             if len(seprate_dilution) != 0:
                 for sep in seprate_dilution[0]:
-                    if sep in key:
+                    if sep == key[key.index("plate"):key.index("plate") + 7] or sep == key[key.index("plate"):key.index("plate") + 8] or sep == key[key.index("plate"):key.index("plate") + 9]:
                         string_top = formula2(top, *params_dictionary[key]) * int(dilution[0][3][3])
                         string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
                 for sep in seprate_dilution[1]:
-                    if sep in key:
+                    if sep == key[key.index("plate"):key.index("plate") + 7] or sep == key[key.index("plate"):key.index("plate") + 8] or sep == key[key.index("plate"):key.index("plate") + 9]:
                         string_top = formula2(top, *params_dictionary[key]) * int(dilution[1][3][3])
                         string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[1][3][3])
             elif len(dilution) == 1:
@@ -957,41 +1101,48 @@ def Intermediate_result(request):
                 string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[0][3][3])
             else:
                 for d in range(len(dilution)):
-                    if dilution[d][0][0] in key:
+                    if dilution[d][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or dilution[d][0][0].lower() == key[key.index("plate"):key.index("plate") + 8] or dilution[d][0][0].lower() == key[key.index("plate"):key.index("plate") + 9]:
                         string_top = formula2(top, *params_dictionary[key]) * int(dilution[d][3][3])
                         string_bot = formula2(bot, *params_dictionary[key]) * int(dilution[d][3][3])
             count_mod = 0
+            count_mod2 = 0
+            row_check += 1
             for value in values:
-                if count_mod == 10:
-                   count_mod = 0
-                if count_mod < 5 or elisa_type == '2':
-                    if type(value[1]) == str:
-                        if len(value) == 2:
-                            if float(value[1]) < bot:
-                                temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
+                if row_check != int(row_standard):
+                    if count_mod == 12:
+                       count_mod = 0
+                       count_mod2 = 0
+                    if elisa_type == '2':
+                        count_mod2 = 0
+                    if count_mod != int(mod_check_colum1) and count_mod != int(mod_check_colum2) and count_mod2 < 5 or int(row_standard) != 0 and count_mod2 < 5:
+                        count_mod2 += 1
+                        if type(value[1]) == str:
+                            if len(value) == 2:
+                                if float(value[1]) < bot:
+                                    temp0.append([value[0]] + ['<' + str(round(string_bot, 3))] + ["below"])
+                                else:
+                                    temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
                             else:
-                                temp4.append([value[0]] + ['>' + str(round(string_top, 3))] + ['linear'])
+                                value[2] = 1
+                                temp0.append(value[:3])
+                        elif int(value[1]) <= float(string_bot):
+                            if len(value) == 2:
+                                temp1.append(value + ['below'])
+                            else:
+                                value[2] = 1
+                                temp1.append(value[:3])
+                        elif int(value[1]) >= float(string_top):
+                            if len(value) == 2:
+                                temp3.append(value + ['above'])
+                            else:
+                                value[2] = 3
+                                temp3.append(value[:3])
                         else:
-                            value[2] = 1
-                            temp0.append(value[:3])
-                    elif int(value[1]) <= float(string_bot):
-                        if len(value) == 2:
-                            temp1.append(value + ['below'])
-                        else:
-                            value[2] = 1
-                            temp1.append(value[:3])
-                    elif int(value[1]) >= float(string_top):
-                        if len(value) == 2:
-                            temp3.append(value + ['above'])
-                        else:
-                            value[2] = 3
-                            temp3.append(value[:3])
-                    else:
-                        if len(value) == 2:
-                            temp2.append(value + ['linear'])
-                        else:
-                            value[2] = 2
-                            temp2.append(value[:3])
+                            if len(value) == 2:
+                                temp2.append(value + ['linear'])
+                            else:
+                                value[2] = 2
+                                temp2.append(value[:3])
                 count_mod += 1
             mean_ST_dictionary[key].reverse()
         sorted_temp1 = sorted(temp1, key=itemgetter(1))
@@ -1014,6 +1165,8 @@ def Intermediate_result(request):
                 return render(request, 'Intermediate_result.html', {
                     'complete_list': complete_list,
                     'unit': unit_name,
+                    'lower': lower,
+                    'upper': upper,
                     'limit_list': up_list,
                     'check': 'go_up'
                 })
@@ -1022,10 +1175,12 @@ def Intermediate_result(request):
         return render(request, 'Intermediate_result.html', {
             'complete_list': complete_list,
             'unit': unit_name,
+            'lower': lower,
+            'upper': upper,
             'limit_list' : low_list,
             'check' : 'go_low'
         })
-    except KeyboardInterrupt: #TODO look at this
+    except: #todo specify this
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
                      'your preferences on the visualize Data page.'
@@ -1053,13 +1208,19 @@ def intermediate_list(key, params):
     """
     global intermediate_dictionary
     for options in range(len(totaal)):
-        num1 = int(''.join(filter(str.isdigit, key)))
-        num2 = int(''.join(filter(str.isdigit, totaal[options][0][0])))
-        if num1 == num2:
+        if totaal[options][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or totaal[options][0][0].lower() == key[key.index("plate"):key.index("plate") + 8] or totaal[options][0][0].lower() == key[key.index("plate"):key.index("plate") + 9]:
             position = options
     list1 = []
+    count_plate = 0
     for i, j in dictionary.items():
         if i == key:
+            for elements in dict_st.values():
+                if len(elements) != 0:
+                    pos1 = elements[count_plate][1]
+                    pos2 = elements[count_plate][2]
+                    pos3 = elements[count_plate + 1][1]
+                    pos4 = elements[count_plate + 1][2]
+            count_plate += 2
             params_dictionary[key] = params
             for values in range(len(j)):
                 if values != 0:
@@ -1080,14 +1241,22 @@ def intermediate_list(key, params):
                                             if dilution[dil][0][0] in key:
                                                 result *= int(dilution[dil][values+1][value])
                                 else:
-                                    for d in range(len(seprate_dilution)):
-                                        for g in seprate_dilution[d]:
-                                            if g in key:
-                                                result *= int(dilution[d][values+1][value])
+                                    if len(seprate_dilution) == 0:
+                                        if len(dilution) == 1:
+                                            result *= int(dilution[0][values + 1][value])
+                                        else:
+                                            for dil in range(len(dilution)):
+                                                if dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 8] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 9]:
+                                                    result *= int(dilution[dil][values+1][value])
+                                    else:
+                                        for d in range(len(seprate_dilution)):
+                                            for g in seprate_dilution[d]:
+                                                if g == key[key.index("plate"):key.index("plate") + 7] or g == key[key.index("plate"):key.index("plate") + 8] or g == key[key.index("plate"):key.index("plate") + 9]:
+                                                    result *= int(dilution[d][values+1][value])
 
-                                result = round(result, 3)
-                            list1.append([totaal[position][values + 1][value], result])
-            intermediate_dictionary[i] = list1
+                                    result = round(result, 3)
+                                list1.append([totaal[position][values + 1][value], result])
+                intermediate_dictionary[i] = list1
 
 
 def End_results(request):
@@ -1098,6 +1267,11 @@ def End_results(request):
         - final_dictionary: An empty dictionarty list.
         - final_list: An empty list.
         - cut_off_value_au: The number zero.
+        - rule: string with none
+        - row_standard: A string with as value a number telling which row contains the ST values
+        - column_standard: A list with as values numbers telling which columns contain the ST values
+        - elisa_type: A string with the number 1 or 2
+        - cut_off_type: A string with the number 1 or 2
         - dictionary: A dictionary with as key the plate names and the value a nested list with in it the OD and RBG code.
         - cut_off_value: It has contains a float which is the OD given by the cut_off function
         - params_dictionary: In this dictionary the keys are the name of the plates and the values the params.
@@ -1110,13 +1284,25 @@ def End_results(request):
         - final_dictionary: The dictionary is now filled and has as key sampleID which start with 1 and goes up by 1
                             with every now result. the values are a list with as first a sample id, second an 1 or 2,
                             and third the au/ml.
-        - final_list: A list with as first a sample id, second an 1 or 2 and third the au/ml.
+        - final_list: A list with as first a sample id, second an 0 or 1 , third the au/ml, fourth an OD and if requested
+                      an non-mod OD.
         - cut_off_value_au: An au/ml, calculated from the OD from cut_off_value and the params from params_dictionary.
+        - rule: string with 1 or 2 or 3 or 4.
         - end_result: A dictionary with as key the name of the plates and the values a nested list. the nested list
                       have as values first a sample id, second the au/ml, and third a 1 or 2 or 3.
     Function:
-        - The function first checks if any button was pressed, if their were any buttons pressed it then check which.
-          After checking which buttons where pressed it will fill up the final_dictionary and final_list by checking
+        - The function first checks if any button was pressed, if there were any buttons pressed it then check which.
+          first it will check if the user wanted a cutt_off by checking cutt_off type.
+          second it will add some additional information to end_result dictionary. But in order to that it needed to see
+          where the ST values are. With an if statement it will look if the ST values are in the rows or columns.
+          if row is not equal to zero then the ST values are in the rows, so now it needs to skip the row with the ST values
+          it does that by checking if the counter is between non_mod_skip - 12 and non_mod_skip because if its in bewteen
+          that means that is the row with the ST values. For the columns it checks if two positions are the same as the counter
+          check_first_col and check_second_col will be + 12 to move down a row so all columns will be checked.
+          Now the function will check if the analysis has mod/non-mods if it doesn't have them then its sets non_mod_limit
+          on 12 otherwise it will different between 6 for rows and 7 for columns. now just like with the ST values it will
+          check two things for rows it will check if the counter is between and for columns if it is the same.
+          After doing all that it will fill up the final_dictionary and final_list by checking
           if they pass any off the requirement given by the if-statement. If all the requirements are met then the list
           is given an 1, if they are not met then the list gets an 0. After the list is filled and sorted
           the list is given to the render.
@@ -1126,85 +1312,178 @@ def End_results(request):
         global cut_off_value_au
         global final_dictionary
         global end_result
-        rule = 'none'
+        global rule
+        OD_multiplier = 'None'
+        OD_multiplier2 = 'nothing'
         if request.method == 'POST':
-            if request.POST.get('Empty database'):
-                reset_data()
             if request.POST.get('download'):
-                report_writeout()
+                filename = request.POST.get('File_name')
+                target = report_writeout()
+                response = HttpResponse(open(target, 'rb').read())
+                response['Content-Type'] = 'text/plain'
+                response['Content-Disposition'] = f'attachment; filename={filename}.zip'
+                return response
             if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
                     request.POST.get('update_table_S') or request.POST.get('update_table_No'):
                 final_dictionary = {}
                 OD_multiplier = request.POST.get('OD_multiplier')
-                if len(end_result[HD][0]) == 2:
+                first_value = list(end_result.values())[0]
+                if len(first_value[0]) == 2:
                     for keys, values in dictionary.items():
                         if keys == HD:
                             params = params_dictionary[HD]
                             cut_off_value_au = formula2(float(cut_off_value), *params) * 1
+                        elif HD == 'None':
+                            cut_off_value_au = 0
                         if keys not in delete:
+                            check_first_col = int(column_standard[0]) - 1
+                            check_second_col = int(column_standard[1]) - 1
                             counter = 0
-                            for OD_list in values[1:]:
+                            row = values[1:]
+                            if int(row_standard) != 0:
+                                non_mod_skip = 12 * int(row_standard)
+                            for OD_list in row:
                                 well = OD_list[0][0]
-                                plate_number = 3
-                                for OD in OD_list[3:]:
-                                    end_result[keys][counter].append(OD[0])
-                                    end_result[keys][counter].append(well)
-                                    end_result[keys][counter].append(plate_number)
-                                    counter += 1
-                                    plate_number += 1
+                                plate_number = 1
+                                column = OD_list[1:]
+                                for OD in column:
+                                    if int(row_standard) != 0:
+                                        if counter < (non_mod_skip - 12) or counter >= non_mod_skip:
+                                            end_result[keys][counter].append(OD[0])
+                                            end_result[keys][counter].append(well)
+                                            end_result[keys][counter].append(plate_number)
+                                        counter += 1
+                                        plate_number += 1
+                                    else:
+                                        if counter == check_second_col:
+                                            check_first_col += 12
+                                            check_second_col += 12
+                                        elif counter != check_first_col:
+                                            end_result[keys][counter].append(OD[0])
+                                            end_result[keys][counter].append(well)
+                                            end_result[keys][counter].append(plate_number)
+                                        counter += 1
+                                        plate_number += 1
                 sampleID = 1
                 final_list = []
                 for keys, values in end_result.items():
                     if keys != HD:
                         counter = 0
                         counter2 = 0
+                        mod_check_colum1 = int(column_standard[0]) - 1
+                        mod_check_colum2 = int(column_standard[1]) - 1
                         for elements in values:
+                            if int(row_standard) != 0:
+                                non_mod_count = 6
+                                if elisa_type == '1':
+                                    non_mod_limit = 6
+                                else:
+                                    non_mod_limit = 12
+                                non_mod_skip = 12 * int(row_standard)
+                                if counter2 < (non_mod_skip - 12) or counter2 >= non_mod_skip:
+                                    non_mod_check = True
+                                else:
+                                    non_mod_check = False
+                            elif int(row_standard) == 0:
+                                non_mod_count = 5
+                                if elisa_type == '1':
+                                    non_mod_limit = 7
+                                else:
+                                    non_mod_limit = 12
+                                if counter2 == mod_check_colum1:
+                                    non_mod_check = False
+                                elif counter2 == mod_check_colum2:
+                                    mod_check_colum1 += 12
+                                    mod_check_colum2 += 12
+                                    non_mod_check = False
+                                else:
+                                    non_mod_check = True
                             if elements[0] != 'Empty':
-                                if counter < 5:
-                                    if float(elements[1]) >= float(lower):
-                                        if elements[1] >= float(cut_off_value_au):
-                                            if request.POST.get('update_table_M'):
-                                                rule = 1
-                                                if (values[counter2][2])/(values[counter2 + 5][2]) >= int(OD_multiplier):
+                                if counter < non_mod_limit:
+                                    if non_mod_check:
+                                        if float(elements[1]) >= float(lower):
+
+                                            if float(elements[1]) <= float(upper):
+                                                if elements[1] >= float(cut_off_value_au):
+                                                    if elisa_type == '1':
+                                                        end_variable = [keys, values[counter2][4],
+                                                                        values[counter2][3], str(elements[0]), 1,
+                                                                        round(elements[1]), values[counter2][2],
+                                                                        values[counter2 + non_mod_count][2]]
+                                                    else:
+                                                        end_variable = [keys, values[counter2][4],
+                                                                        values[counter2][3], str(elements[0]), 1,
+                                                                        round(elements[1]), values[counter2][2]]
+                                                    if request.POST.get('update_table_M'):
+                                                        rule = 1
+                                                        OD_multiplier = request.POST.get('OD_multiplier')
+                                                        if (values[counter2][2])/(values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                            final_dictionary[sampleID] = end_variable
+                                                    elif request.POST.get('update_table_H'):
+                                                        rule = 2
+                                                        OD_multiplier = request.POST.get('OD_higher')
+                                                        if (values[counter2][2]) - (values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                            final_dictionary[sampleID] = end_variable
+                                                    elif request.POST.get('update_table_No'):
+                                                        rule = 4
+                                                        final_dictionary[sampleID] = end_variable
+                                                    elif request.POST.get('update_table_S'):
+                                                        rule = 3
+                                                        OD_multiplier = request.POST.get('OD_multiplier')
+                                                        OD_multiplier2 = request.POST.get('reference')
+                                                        if OD_multiplier == '':
+                                                            OD_multiplier = request.POST.get('OD_higher')
+                                                            if OD_multiplier != '':
+                                                                rule = '2 and 3'
+                                                                if (values[counter2][2]) - (
+                                                                values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                                    if (round(elements[1])) >= int(OD_multiplier2):
+                                                                        final_dictionary[sampleID] = end_variable
+                                                        elif OD_multiplier != None:
+                                                            rule = '1 and 3'
+                                                            if (values[counter2][2]) / (
+                                                            values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                                if (round(elements[1])) >= int(OD_multiplier2):
+                                                                    final_dictionary[sampleID] = end_variable
+                                                        else:
+                                                            if (round(elements[1])) >= int(OD_multiplier2):
+                                                                final_dictionary[sampleID] = end_variable
+                                        if sampleID not in final_dictionary:
+                                            if float(elements[1]) < float(lower):
+                                                if elisa_type == '1':
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
+                                                                              str(elements[0]), 0, '<' + str(lower),
+                                                                              values[counter2][2], values[counter2 + non_mod_count][2]]
+                                                else:
                                                     final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                                  values[counter2][3], elements[0], 1,
-                                                                                  round(elements[1]), values[counter2][2],
-                                                                                  values[counter2 + 5][2]]
-                                            elif request.POST.get('update_table_H'):
-                                                rule = 2
-                                                OD_multiplier = request.POST.get('OD_higher')
-                                                if (values[counter2][2]) - (values[counter2 + 5][2]) >= int(OD_multiplier):
+                                                                                  values[counter2][3],
+                                                                                  str(elements[0]), 0, '<' + str(lower),
+                                                                                  values[counter2][2]]
+                                            elif float(elements[1]) >= float(upper):
+                                                if elisa_type == '1':
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
+                                                                              str(elements[0]), 1, '>' + str(upper),
+                                                                              values[counter2][2], values[counter2 + non_mod_count][2]]
+                                                else:
                                                     final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                                  values[counter2][3], elements[0], 1,
-                                                                                  round(elements[1]), values[counter2][2],
-                                                                                  values[counter2 + 5][2]]
-                                            elif request.POST.get('update_table_No'):
-                                                rule = 4
-                                                final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                              values[counter2][3], elements[0], 1,
-                                                                              round(elements[1]), values[counter2][2],
-                                                                              values[counter2 + 5][2]]
-                                            elif request.POST.get('update_table_S'):
-                                                rule = 3
-                                                OD_multiplier = request.POST.get('reference')
-                                                if (round(elements[1])) >= int(OD_multiplier):
+                                                                                  values[counter2][3],
+                                                                                  str(elements[0]), 1, '>' + str(upper),
+                                                                                  values[counter2][2]]
+                                            else:
+                                                if elisa_type == '1':
+                                                    final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
+                                                                                  str(elements[0]), 0, round(float(elements[1])),
+                                                                                  values[counter2][2], values[counter2 + non_mod_count][2]]
+                                                else:
                                                     final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                                  values[counter2][3], elements[0], 1,
-                                                                                  round(elements[1]), values[counter2][2],
-                                                                                  values[counter2 + 5][2]]
-                                    if sampleID not in final_dictionary:
-                                        if float(elements[1]) < float(lower):
-                                            final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
-                                                                          elements[0], 0, '<' + str(lower),
-                                                                          values[counter2][2], values[counter2 + 5][2]]
-                                        else:
-                                            final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
-                                                                          elements[0], 0, round(float(elements[1])),
-                                                                          values[counter2][2], values[counter2 + 5][2]]
+                                                                                  values[counter2][3],
+                                                                                  str(elements[0]), 0,
+                                                                                  round(float(elements[1])),
+                                                                                  values[counter2][2]]
                                 sampleID += 1
                             counter += 1
                             counter2 += 1
-                            if counter == 10:
+                            if counter == 12:
                                 counter = 0
                 for i, lists in final_dictionary.items():
                     final_list.append(lists)
@@ -1215,11 +1494,13 @@ def End_results(request):
             'lower': lower,
             'cut_off_value': round(cut_off_value_au),
             'rule': rule,
+            'rule_value' : OD_multiplier,
+            'rule_value2' : OD_multiplier2,
             'unit': unit_name,
             'elisa_type': elisa_type,
             'cut_off_type': cut_off_type,
         })
-    except: #TODO should specify what error is encountered
+    except KeyboardInterrupt:
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
         })
@@ -1232,7 +1513,8 @@ def session_writeout(session_name):  # Note: currently used pickle version = 4, 
                      points_dictionary, mean_ST_dictionary, mean,
                      std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
                      intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au,
-                     unit_name, row_standard, column_standard, elisa_type, cut_off_type,
+                     unit_name, row_standard, column_standard, elisa_type, cut_off_type, divide_number,
+                     seprate_dilution, st_finder, dict_st, list_st_values, standard, rule,
                      serializers.serialize("xml", Plates.objects.all())), f, protocol=4)  # Plates.objects is serialized to xml, preventing upgrading issues with Django
         print("pickle success")
         f.close()
@@ -1244,7 +1526,8 @@ def session_readin(session):
         "points_dictionary", "mean_ST_dictionary", "mean",
         "std", "mean2", "std2", "check_cut_off", "cut_data", "outlier_value", "cut_off_value", "end_result", "lower",
         "upper", "intermediate_dictionary", "params_dictionary", "final_dictionary", "final_list", "cut_off_value_au",
-        "unit_name", "row_standard", "column_standard", "elisa_type", "cut_off_type")
+        "unit_name", "row_standard", "column_standard", "elisa_type", "cut_off_type", "divide_number",
+        "seprate_dilution", "st_finder", "dict_st", "list_st_values", "standard", "rule")
 
     with session as f:
         sessiontuple = pickle.load(f)
@@ -1259,14 +1542,14 @@ def session_readin(session):
             plate.save()
 
 
-def autosave(minutes_between_saves = 5): #path here is the directory path, Path refers to the resolve lib, should probably rename the import?
+def autosave(minutes_between_saves = 5):
     global last_autosave
     time = datetime.datetime.now()
     if (time - last_autosave).seconds / 60 >= minutes_between_saves:
         last_autosave = time
-        path = join(Path(settings.BASE_DIR).resolve().parent, "Autosaves")
+        path = join(settings.BASE_DIR, "Autosaves")
         dircontents = listdir(path)
-        session_writeout(time.strftime(join("Autosaves", "Autosave %d-%m-%Y  %H.%M.%S")))
+        session_writeout(time.strftime(join(path, "Autosave %d-%m-%Y  %H.%M.%S")))
         if len(dircontents) > 5:
             remove(min([join(path, session) for session in dircontents], key=getctime)) #Get the oldest file in the dir and remove it
 
@@ -1305,8 +1588,12 @@ def report_writeout():
         print(key)
         print(value)
     """
+    landing = join(settings.BASE_DIR, "temp", "zipped_results")    #join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
+    target = join(settings.BASE_DIR, "temp", "targetdir")
+    shutil.rmtree(target, ignore_errors=True)
+    mkdir(target)
+    """
     #Create directory, checking for uniqueness
-    dirpath = join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
     unique, iterations = False, 1
     while not unique:
         try:
@@ -1316,14 +1603,14 @@ def report_writeout():
             print("FileExistsError raised")
             iterations += 1
             dirpath = (dirpath.split(" (")[0] + f" ({iterations})")
-
+    """
     #Save images
     for file in listdir(get_mediapath()):
         if file.endswith('.png'):
-            shutil.copy2(get_mediapath(file), dirpath)
+            shutil.copy2(get_mediapath(file), target)
 
     #Save end results
-    with open(join(dirpath, "end_results.txt"), "w") as f:
+    with open(join(target, "end_results.txt"), "w") as f:
         f.write(f"Plate name\t"
                 f"Plate number\t"
                 f"Well number\t"
@@ -1337,5 +1624,8 @@ def report_writeout():
                 f.write(str(element) + "\t")
             f.write("\n")
         f.close()
-
-    return 0
+    #zip it up and make it downloadable
+    if exists(landing+".zip"):
+        remove(landing+".zip")
+    shutil.make_archive(landing, 'zip', target)
+    return landing+".zip"

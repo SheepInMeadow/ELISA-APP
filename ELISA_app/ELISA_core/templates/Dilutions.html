@@ -20,23 +20,25 @@
     <p class="message_fail">The dilution file doesn't have the right amount of plates, try again</p>
 {% endif %}
 {% if check == 'go' %}
-    <div class="plate_st_text">
-        If this dilution isn't for the entire experiment, type which plates this dilution is for. (P.S type
-        the names like this name_plate, name_plate, name_plate, etc)<br><br>
-        <input type="text" name="dilution_1" class="plate_st_input"> <input type="submit" name="plate_belong1" value="Upload data" class="plate_button"/>
-        <br><br>
-        {% if show == 'yes' %}
-        The plates for first dilution: {{dilution_v1}} <br><br>
-        Upload your second dilution file:
-        <input type="file" name="dilution_file2" class="plate_file"/>
-        <input type="submit" name="file_submit2" value="Upload data" class="plate_button"/><br><br>
-        Type here for which plates the second dilution file belongs to.<br><br>
-        <input required type="text" name="dilution_2" class="plate_st_input">
-        {% if check == 'error' %}
-            <p class="message_fail">No file was selected, please try again.</p>
-        {% endif %}
-        {% endif %}
-    </div>
+    {% if dilution|length <= 1 %}
+        <div class="plate_st_text">
+            If this dilution isn't for the entire experiment, type which plates this dilution is for. (P.S type
+            the names like this: Plate_1, Plate_2, Plate_3, etc...)<br><br>
+            <input type="text" name="dilution_1" class="plate_st_input"> <input type="submit" name="plate_belong1" value="Upload data" class="plate_button"/>
+            <br><br>
+            {% if show == 'yes' %}
+            The plates for first dilution: {{dilution_v1}} <br><br>
+            Type here for which plates the second dilution file belongs to.<br><br>
+            <input type="text" name="dilution_2" class="plate_st_input"><br><br>
+            Upload your second dilution file:
+            <input type="file" name="dilution_file2" class="plate_file"/>
+            <input type="submit" name="file_submit2" value="Upload data" class="plate_button"/>
+            {% if check == 'error' %}
+                <p class="message_fail">No file was selected, please try again.</p>
+            {% endif %}
+            {% endif %}
+        </div>
+    {% endif %}
 </form>
 {% for i in dilution %}
     <table>

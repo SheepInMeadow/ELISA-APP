@@ -12,7 +12,7 @@
     {% csrf_token %}
     <p class="spacing">Fill in the fields to complete the formula for determining the outlier value:</p>
     <p class="spacing">Formula for outlier value = 1 * mean + 4 * standard deviation</p>
-    <p class="spacing">Outlier = <input type="number" name="input1" value="1"> * {{ mean }} + <input type="number" name="input2" value="4"> * {{ std }}</p>
+    <p class="spacing">Outlier = <input type="number" class="input" name="input1" value="1"> * {{ mean }} + <input type="number" class="input" name="input2" value="4"> * {{ std }}</p>
     {% if outlier_value != 0.0 %}
         <p class="spacing">Outlier value: {{outlier_value}}</p>
     {% endif %}
@@ -26,7 +26,7 @@
         {% csrf_token %}
         <p class="spacing">Fill in the fields to complete the formula for determining the cut-off value:</p>
         <p class="spacing">Formula for cut-off value = 1 * new mean + 2 * new standard deviation</p>
-        <p class="spacing">Cut-off = <input type="number" name="input3" value="1"> * {{ mean2 }} + <input type="number" name="input4" value="2"> * {{ std2 }}</p>
+        <p class="spacing">Cut-off = <input type="number" class="input" name="input3" value="1"> * {{ mean2 }} + <input type="number" class="input" name="input4" value="2"> * {{ std2 }}</p>
         {% if cut_off_value != 0.0 %}
             <p class="spacing">Cut-off value: {{cut_off_value}}</p>
         {% endif %}

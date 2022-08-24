@@ -1,12 +1,12 @@
-function myFunction(choice) {
-    if (choice === 'mod/non') {
-        document.getElementById("input").style.display = 'inline';
-        document.getElementById("mod").style.display = 'inline';
-    } else if (choice === 'general') {
-        document.getElementById("input").style.display = 'inline';
-        document.getElementById("mod").style.display = 'none';
-    }
-}
+// function myFunction(choice) {
+//     if (choice === 'mod/non') {
+//         document.getElementById("input").style.display = 'inline';
+//         document.getElementById("mod").style.display = 'inline';
+//     } else if (choice === 'general') {
+//         document.getElementById("input").style.display = 'inline';
+//         document.getElementById("mod").style.display = 'none';
+//     }
+// }
 
 
 function referenceSelect() {
