@@ -1225,11 +1225,21 @@ def intermediate_list(key, params):
             for values in range(len(j)):
                 if values != 0:
                     for value in range(len(j[values])):
-                        if value != 0:
-                            if value != pos2 and values != pos1 or value != pos4 and values != pos3:
-                                result = formula2(j[values][value][0], *params)
-                                if np.isnan(result):
-                                    result = str(j[values][value][0])
+                        if value != 0 and value != 1 and value != 2:
+                            result = formula2(j[values][value][0], *params)
+                            if np.isnan(result):
+                                result = str(j[values][value][0])
+                            else:
+                                if len(seprate_dilution) == 0:
+                                    if len(dilution) == 1:
+                                        if int(values) == 1:
+                                            result *= int(dilution[0][values + 1][value])
+                                        else:
+                                            result *= int(dilution[0][values][value])
+                                    else:
+                                        for dil in range(len(dilution)):
+                                            if dilution[dil][0][0] in key:
+                                                result *= int(dilution[dil][values+1][value])
                                 else:
                                     if len(seprate_dilution) == 0:
                                         if len(dilution) == 1:
