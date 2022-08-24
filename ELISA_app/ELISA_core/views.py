@@ -1499,7 +1499,8 @@ def session_writeout(session_name):  # Note: currently used pickle version = 4, 
                      points_dictionary, mean_ST_dictionary, mean,
                      std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
                      intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au,
-                     unit_name, row_standard, column_standard, elisa_type, cut_off_type,
+                     unit_name, row_standard, column_standard, elisa_type, cut_off_type, divide_number,
+                     seprate_dilution, st_finder, dict_st, list_st_values, standard, rule,
                      serializers.serialize("xml", Plates.objects.all())), f, protocol=4)  # Plates.objects is serialized to xml, preventing upgrading issues with Django
         print("pickle success")
         f.close()
@@ -1511,7 +1512,8 @@ def session_readin(session):
         "points_dictionary", "mean_ST_dictionary", "mean",
         "std", "mean2", "std2", "check_cut_off", "cut_data", "outlier_value", "cut_off_value", "end_result", "lower",
         "upper", "intermediate_dictionary", "params_dictionary", "final_dictionary", "final_list", "cut_off_value_au",
-        "unit_name", "row_standard", "column_standard", "elisa_type", "cut_off_type")
+        "unit_name", "row_standard", "column_standard", "elisa_type", "cut_off_type", "divide_number",
+        "seprate_dilution", "st_finder", "dict_st", "list_st_values", "standard", "rule")
 
     with session as f:
         sessiontuple = pickle.load(f)
