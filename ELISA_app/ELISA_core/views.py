@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, HttpResponse
 from .models import Plates
 import openpyxl
 import seaborn as sns
@@ -87,11 +87,6 @@ def Home(request):
     Function:
         - Renders the template Home.html when the page is visited.
     """
-    if request.method == 'POST':
-        if request.POST.get('download_pickle'):
-            session_writeout("Manual Session")
-        elif request.POST.get('submit_pickle'):
-            session_readin(request.FILES['my_pickle'])
     return render(request, 'Home.html', {
             'version': version_number,
         })
@@ -113,6 +108,20 @@ def Input_data(request):
     """
     try:
         if request.method == 'POST':
+            #start pickle magic
+            if request.POST.get('download_pickle'):
+                session_writeout("Manual Session")
+                filename = request.POST.get('Session_name')
+                response = HttpResponse(open("Manual Session.ELISA_App", 'rb').read())
+                response['Content-Type'] = 'text/plain'
+                response['Content-Disposition'] = f'attachment; filename={filename}.ELISA_App'
+                return response
+            elif request.POST.get('submit_pickle'):
+                session_readin(request.FILES['my_pickle'])
+                return render(request, 'Input_data.html', {
+                    'check': "pickle_upload",
+                })
+            #end pickle magic
             error = 'correct'
             if request.POST.get('Empty database'):
                 reset_data()
@@ -131,7 +140,7 @@ def Input_data(request):
                 })
         else:
             return render(request, 'Input_data.html')
-    except:
+    except: #todo should really specify this
         return render(request, 'Input_data.html', {
             'check': 'false',
         })
@@ -333,13 +342,15 @@ def Plate_layout(request):
           to bottom. If no button was pressed the template simply renders with only the file input field and submit
           button.
     """
-    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name
+    global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name, flow
     if request.method == 'POST':
         elisa_type = request.POST.get('elisa_type')
         cut_off_type = request.POST.get('cut-off_type')
+        flow['Select data input type'] = {"1":"Modified/Non-modified ELISA", "2":"General ELISA"}["2"] #todo go for [elisa_type] and replace "2"
+        flow['Cut-off or no cut-off'] = {"1":"I want to use HDs to calculate a cut-off", "2":"I don’t want to calculate a cut-off"}[cut_off_type if cut_off_type != None else "1"]
         if elisa_type == "1":
-            row_standard = request.POST.get('row_input')
-            column_standard = request.POST.get('column_input')
+            row_standard = request.POST.get('row_input') #TODO INCLUDE IN FLOW
+            column_standard = request.POST.get('column_input') #same as above
         if request.POST.get('file_submit'):
             totaal = []
             if request.FILES.getlist("my_file") == []:
@@ -348,9 +359,8 @@ def Plate_layout(request):
                     'check': check, 'totaal': totaal,
                 })
             excel_data = Plate_layout_1(request, "P")
-            global flow; flow["PureLayout"] = excel_data #flowline
+            flow["Plate Layout"] = excel_data #flowline
             totaal = Plate_layout_2(excel_data)
-            flow["ModifiedLayout"] = totaal #flowline
             check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal,
@@ -359,6 +369,8 @@ def Plate_layout(request):
         if request.POST.get('standaard_input'):
             Plate_layout_3(request)
             unit_name = request.POST.get('unit')
+            flow['ST values of all plates'] = request.POST.get('standaard')
+            flow['Divide number'] = request.POST.get('divide')
             check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal, 'check': check, })
@@ -455,7 +467,7 @@ def Plate_layout_3(request):
     divide_number = request.POST.get('divide')
     list_st = []
     list_divide = []
-    for i in totaal:
+    for i in totaal: #total is a global, function works cause total has a nested list which is mutable cause of python magic
         for j in range(len(i)):
             list_divide.append(values)
             list_st.append('st_' + str(j+1))
@@ -791,7 +803,7 @@ def Cut_off(request):
                 input1 = request.POST.get('input1')
                 input2 = request.POST.get('input2')
                 outlier_value = (float(input1) * mean) + (float(input2) * std)
-                outlier_value = round(outlier_value, 3)
+                outlier_value = round(outlier_value, 3) #TODO Flow for formula and outlier
                 new_y_list = []
                 for data in cut_data:
                     if data < outlier_value:
@@ -818,7 +830,7 @@ def Cut_off(request):
                 input3 = request.POST.get('input3')
                 input4 = request.POST.get('input4')
                 cut_off_value = (float(input3) * mean2) + (float(input4) * std2)
-                cut_off_value = round(cut_off_value, 3)
+                cut_off_value = round(cut_off_value, 3) #TODO Flow for formula and cut-off
                 return render(request, 'Cut_off.html', {
                     'mean': mean,
                     'std': std,
@@ -1257,7 +1269,8 @@ def autosave(minutes_between_saves = 5): #path here is the directory path, Path 
 
 
 def report_writeout():
-    #todo temp, remove this
+    #todo stuff for better report function visualisation, not finished
+    """
     global flow
     print([_.id for _ in Plates.objects.all()]) # Inserted Plates Names
     for i in flow["ModifiedLayout"]:    #modified plates
@@ -1274,9 +1287,21 @@ def report_writeout():
             for k in j:
                 print(k, "\t", sep='', end='')
             print(end="\n")
+    for key, value in dictionary.items():
+        print(key)
+        for i in value:  # modified plates
+            for j in i:
+                for k in j:
+                    print(k, "\t", sep='', end='')
+                print(end="\n")
+    print(HD) #Selected Healthy Donor
+    for i in delete: #Plates to be excluded
+        print(i)
+
     for key, value in flow.items():
         print(key)
         print(value)
+    """
     #Create directory, checking for uniqueness
     dirpath = join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
     unique, iterations = False, 1
@@ -1296,7 +1321,14 @@ def report_writeout():
 
     #Save end results
     with open(join(dirpath, "end_results.txt"), "w") as f:
-        f.write(f"Plate name\tPlate number\tWell number\tSample ID\tPositive (1) or Negative (0)\t{unit_name}\tOD of mod-peptide\tOD of non-mod-peptide\n")
+        f.write(f"Plate name\t"
+                f"Plate number\t"
+                f"Well number\t"
+                f"Sample ID\t"
+                f"Positive (1) or Negative (0)\t"
+                f"{unit_name}\t"
+                f"OD of mod-peptide\t"
+                f"OD of non-mod-peptide\n")
         for elements in final_list:
             for element in elements:
                 f.write(str(element) + "\t")

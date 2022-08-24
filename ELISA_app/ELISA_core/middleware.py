@@ -11,5 +11,5 @@ class AutosaveMiddleware:
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         if request.path_info != '/':
-            autosave()
+            autosave(minutes_between_saves=0.5)
         pass
