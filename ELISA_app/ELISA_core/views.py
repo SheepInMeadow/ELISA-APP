@@ -1232,7 +1232,10 @@ def intermediate_list(key, params):
                             else:
                                 if len(seprate_dilution) == 0:
                                     if len(dilution) == 1:
-                                        result *= int(dilution[0][values][value])
+                                        if int(values) == 1:
+                                            result *= int(dilution[0][values + 1][value])
+                                        else:
+                                            result *= int(dilution[0][values][value])
                                     else:
                                         for dil in range(len(dilution)):
                                             if dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 8] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 9]:
