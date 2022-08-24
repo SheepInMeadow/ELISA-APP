@@ -33,3 +33,82 @@
   font-size: 15pt;
   font-family: "Arial", serif;
 }
+.dilution_text{
+  margin-left: 2%;
+  font-size: 15pt;
+  font-family: "Arial", serif;
+}
+
+.plate_top {
+    margin-top: 2%;
+    margin-left: 2%;
+}
+
+.plate_file {
+    font-size: 15pt;
+    font-family: "Arial", serif;
+}
+
+.plate_button {
+    font-size: 15pt;
+    font-family: "Arial", serif;
+}
+
+.message_fail {
+    margin-left: 2%;
+    font-size: 15px;
+    color: red;
+    font-family: "Arial", serif;
+}
+
+.plate_st_text {
+    font-size: 20px;
+    font-family: "Arial", serif;
+}
+
+.plate_st_input {
+    font-size: 21px;
+    font-family: "Arial", serif;
+}
+
+.plate_table_button {
+    font-size: 19px;
+    font-family: "Arial", serif;
+}
+
+table, td {
+    border-collapse: collapse;
+}
+
+table {
+    margin-top: 3%;
+    margin-left: 2%;
+    color: #333;
+    background: white;
+    border: 1px solid grey;
+    font-size: 10pt;
+    border-collapse: collapse;
+    font-family: "Arial", serif;
+}
+
+td {
+    width: 80px;
+    border: 1px solid grey;
+}
+
+.ELISA_type {
+    float: left;
+    font-size: 21px;
+    font-family: "Arial", serif;
+}
+
+.cut-off {
+    margin-left: 50%;
+    font-size: 21px;
+    font-family: "Arial", serif;
+}
+.input {
+    width: 100%;
+    font-size: 21px;
+    font-family: "Arial", serif;
+}

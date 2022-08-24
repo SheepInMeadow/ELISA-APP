@@ -235,7 +235,11 @@ def formatting_xlsx(file_name):
         excel_data[1].insert(0, '#')
         for i in excel_data:
             for j in i:
-                data_string += j + "="
+                if j != 'None' and j != ' ':
+                    if j == '( + )':
+                        data_string += '10' + "="
+                    else:
+                        data_string += j + "="
     return data_string
 
 
@@ -305,7 +309,8 @@ def formatting_xls(file_name):
     excel_data[1].insert(0, '#')
     for i in excel_data:
         for j in i:
-            data_string += j + "="
+            if j != 'None' and j != ' ':
+                data_string += j + "="
     return data_string
 
 
@@ -362,64 +367,71 @@ def Plate_layout(request):
            submitted and render the page.
     """
     global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name, standard, cut_data
-    if request.method == 'POST':
-        if request.POST.get('file_submit'):
-            elisa_type = request.POST.get('elisa_type')
-            cut_off_type = request.POST.get('cut-off_type')
-            row_standard = request.POST.get('row_input')
-            column_standard = request.POST.get('column_input')
-            if row_standard == None:
-                row_standard = 0
-            if column_standard == None:
-                column_standard = [0, 0]
-            else:
-                column_standard = column_standard.split(',')
-        if request.POST.get('file_submit'):
-            totaal = []
-            if request.FILES.getlist("my_file") == []:
-                check = 'error'
+    try:
+        if request.method == 'POST':
+            if request.POST.get('file_submit'):
+                elisa_type = request.POST.get('elisa_type')
+                cut_off_type = request.POST.get('cut-off_type')
+                row_standard = request.POST.get('row_input')
+                column_standard = request.POST.get('column_input')
+                if row_standard == None:
+                    row_standard = 0
+                if column_standard == None:
+                    column_standard = [0, 0]
+                else:
+                    column_standard = column_standard.split(',')
+            if request.POST.get('file_submit'):
+                totaal = []
+                if request.FILES.getlist("my_file") == []:
+                    check = 'error'
+                    return render(request, 'Plate_layout.html', {
+                        'check': check, 'totaal': totaal,'row_input': row_standard,
+                        'column_input': str(column_standard[0]) + ',' + str(column_standard[1]), 'elisa_type': elisa_type,
+                        'cut_off_type': cut_off_type,
+                    })
+                excel_data = Plate_layout_1(request, "P")
+                totaal = Plate_layout_2(excel_data)
+                check = 'go'
                 return render(request, 'Plate_layout.html', {
-                    'check': check, 'totaal': totaal,'row_input': row_standard,
+                    'totaal': totaal,
+                    'check': check,'row_input': row_standard,
                     'column_input': str(column_standard[0]) + ',' + str(column_standard[1]), 'elisa_type': elisa_type,
-                    'cut_off_type': cut_off_type,
+                        'cut_off_type': cut_off_type,
                 })
-            excel_data = Plate_layout_1(request, "P")
-            totaal = Plate_layout_2(excel_data)
-            check = 'go'
-            return render(request, 'Plate_layout.html', {
-                'totaal': totaal,
-                'check': check,'row_input': row_standard,
-                'column_input': str(column_standard[0]) + ',' + str(column_standard[1]), 'elisa_type': elisa_type,
-                    'cut_off_type': cut_off_type,
-            })
-        if request.POST.get('standaard_input'):
-            cut_data = []
-            elisa_type = request.POST.get('elisa_type')
-            cut_off_type = request.POST.get('cut-off_type')
-            row_standard = request.POST.get('row_input')
-            column_standard = request.POST.get('column_input')
-            if row_standard == None:
-                row_standard = 0
-            if column_standard == None:
-                column_standard = [0, 0]
-            else:
-                column_standard = column_standard.split(',')
-            Plate_layout_3(request)
-            standard = request.POST.get('standaard')
-            unit_name = request.POST.get('unit')
-            check = 'go'
+            if request.POST.get('standaard_input'):
+                cut_data = []
+                elisa_type = request.POST.get('elisa_type')
+                cut_off_type = request.POST.get('cut-off_type')
+                row_standard = request.POST.get('row_input')
+                column_standard = request.POST.get('column_input')
+                if row_standard == None:
+                    row_standard = 0
+                if column_standard == None:
+                    column_standard = [0, 0]
+                else:
+                    column_standard = column_standard.split(',')
+                Plate_layout_3(request)
+                standard = request.POST.get('standaard')
+                unit_name = request.POST.get('unit')
+                check = 'go'
+                return render(request, 'Plate_layout.html', {
+                    'totaal': totaal, 'check': check, 'row_input': row_standard,
+                    'column_input': str(column_standard[0]) + ',' + str(column_standard[1]),
+                    'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
+                        'cut_off_type': cut_off_type,
+                })
+        else:
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal, 'check': check, 'row_input': row_standard,
                 'column_input': str(column_standard[0]) + ',' + str(column_standard[1]),
                 'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
-                    'cut_off_type': cut_off_type,
+                        'cut_off_type': cut_off_type,
             })
-    else:
-        return render(request, 'Plate_layout.html', {
-            'totaal': totaal, 'check': check, 'row_input': row_standard,
-            'column_input': str(column_standard[0]) + ',' + str(column_standard[1]),
-            'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
-                    'cut_off_type': cut_off_type,
+    except:
+        row_standard = 0
+        column_standard = [0, 0]
+        return render(request, 'Error.html', {
+            'error': 'There was an incorrect input. Please return to the Plate Layout page and try again.',
         })
 
 
@@ -471,7 +483,7 @@ def Plate_layout_2(excel_data):
     tot_rows = len(excel_data)
     for x in range(len(excel_data)):
         if x != 0:
-            if 'late ' in excel_data[x][0]:
+            if 'late' in excel_data[x][0]:
                 rows = x-1
                 break
             else:
@@ -489,7 +501,7 @@ def Plate_layout_2(excel_data):
                 length_empty = len(k)
             temp.append(k)
             counter += 1
-            if counter == rows:
+            if counter == (rows):
                 totaal.append(temp)
                 counter = 0
                 temp = []
@@ -535,7 +547,7 @@ def Plate_layout_3(request):
                         if index == 0 and str(i[j][k]).lower() == 'st_1':
                             st_finder = [0, j, k]
                         i[j][k] = round(float(list_divide[d]), 3)
-                    elif i[j][k] == 'Blank':
+                    elif str(i[j][k]).lower() == 'blanco':
                         i[j][k] = "#"
                     elif len(list_st_values) != 0:
                         if d <= 7:
@@ -686,81 +698,81 @@ def Visualize_data(request):
           generate tables, graphs, checkboxes and dropdowns. If any of the code raises and error it is caught with the
           except statement. This will then render an error on the page itself without any of the tables or graphs.
     """
-    try:
-        global dictionary
-        global HD
-        global delete
-        if request.method == 'POST':
-            if request.POST.get("Confirm1"):
-                HD = request.POST['HD']
-            elif request.POST.get("Confirm2"):
-                HD = 'None'
-            bottom = request.POST.getlist('top')
-            top = request.POST.getlist('bottom')
-            counter = 0
-            for keys in dictionary:
-                points_dictionary[keys] = [top[counter], bottom[counter]]
-                counter += 1
-            delete = request.POST.getlist('delete')
-        data = Plates.objects.values()
+    # try:
+    global dictionary
+    global HD
+    global delete
+    if request.method == 'POST':
+        if request.POST.get("Confirm1"):
+            HD = request.POST['HD']
+        elif request.POST.get("Confirm2"):
+            HD = 'None'
+        bottom = request.POST.getlist('top')
+        top = request.POST.getlist('bottom')
         counter = 0
+        for keys in dictionary:
+            points_dictionary[keys] = [top[counter], bottom[counter]]
+            counter += 1
+        delete = request.POST.getlist('delete')
+    data = Plates.objects.values()
+    counter = 0
+    nested = []
+    temp = []
+    for i in data:
+        name = i['id'].lower()
+        lines = i['data'].split('=')[:-1]
+        number1 = lines[106].replace(',', '.')
+        number2 = lines[107].replace(',', '.')
+        calculation = ((float(number1) + float(number2))/2)
+        mean = round(calculation, 3)
+        max = 0.0
+        new_lines = []
+        position = lines.index("A")
+        for k in lines[:position]:
+            new_lines.append(k)
+        for index, x in enumerate(lines[position:]):
+            if x.isdigit():
+                x = str(float(x))
+            new_lines.append(x)
+        for x in new_lines[position:]:
+            if x[0].isdigit():
+                if float(x) > max:
+                    max = float(x)
+        for j in new_lines[1:]:
+            if ',' in j:
+                new = float(j.replace(',', '.')) - mean
+                c_color = max - new
+                times = 255/max
+                color = c_color*times
+                DCO = round(new, 3)
+                temp.append([DCO, (color, 255, color)])
+            elif '.' in j:
+                new = float(j) - mean
+                c_color = max - new
+                times = 255/max
+                color = c_color*times
+                DCO = round(new, 3)
+                temp.append([DCO, (color, 255, color)])
+            else:
+                temp.append([j, (255, 255, 255)])
+            counter += 1
+            if counter == 13:
+                nested.append(temp)
+                counter = 0
+                temp = []
+        dictionary[name] = nested
         nested = []
-        temp = []
-        for i in data:
-            name = i['id'].lower()
-            lines = i['data'].split('=')[:-1]
-            number1 = lines[106].replace(',', '.')
-            number2 = lines[107].replace(',', '.')
-            calculation = ((float(number1) + float(number2))/2)
-            mean = round(calculation, 3)
-            max = 0.0
-            new_lines = []
-            position = lines.index("A")
-            for k in lines[:position]:
-                new_lines.append(k)
-            for index, x in enumerate(lines[position:]):
-                if x.isdigit():
-                    x = str(float(x))
-                new_lines.append(x)
-            for x in new_lines[position:]:
-                if x[0].isdigit():
-                    if float(x) > max:
-                        max = float(x)
-            for j in new_lines[1:]:
-                if ',' in j:
-                    new = float(j.replace(',', '.')) - mean
-                    c_color = max - new
-                    times = 255/max
-                    color = c_color*times
-                    DCO = round(new, 3)
-                    temp.append([DCO, (color, 255, color)])
-                elif '.' in j:
-                    new = float(j) - mean
-                    c_color = max - new
-                    times = 255/max
-                    color = c_color*times
-                    DCO = round(new, 3)
-                    temp.append([DCO, (color, 255, color)])
-                else:
-                    temp.append([j, (255, 255, 255)])
-                counter += 1
-                if counter == 13:
-                    nested.append(temp)
-                    counter = 0
-                    temp = []
-            dictionary[name] = nested
-            nested = []
-        if totaal != []:
-            create_graph(dictionary)
-        return render(request, 'Visualize_data.html', {
-            'dictionary': dictionary,
-            'cut_off_type': cut_off_type,
+    if totaal != []:
+        create_graph(dictionary)
+    return render(request, 'Visualize_data.html', {
+        'dictionary': dictionary,
+        'cut_off_type': cut_off_type,
     })
-    except:
-         return render(request, 'Error.html', {
-             'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the '
-                      'Plate Layout page.',
-         })
+    # except:
+    #      return render(request, 'Error.html', {
+    #          'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the '
+    #                   'Plate Layout page.',
+    #      })
 
 
 def create_graph(dictionary):
@@ -779,7 +791,8 @@ def create_graph(dictionary):
     global mean_ST_dictionary
     conc = totaal[st_finder[0]][st_finder[1]][st_finder[2]]
     x_list = [conc]
-    for i in range(6):
+    number_loop = len(totaal[0]) - 4
+    for i in range(number_loop):
         conc = float(conc)/int(divide_number)
         x_list.append(conc)
     y_list = []
@@ -795,7 +808,6 @@ def create_graph(dictionary):
                 mean = ((float(values[pos1-1][pos2][0]) + float(values[pos3-1][pos4][0]))/2)
                 temp.append(round(mean, 3))
         count_plate += 2
-        temp.pop()
         y_list.append(temp)
         temp = []
     counter = 0
@@ -805,7 +817,7 @@ def create_graph(dictionary):
     counter = 0
     for key in dictionary:
         guess = [1, 1, 1, 1, 1]
-        params, params_coveriance = optimization.curve_fit(formula, x_list, y_list[counter], guess)
+        params, params_coveriance = optimization.curve_fit(formula, x_list, y_list[counter], guess, maxfev=5000)
         intermediate_list(key, params)
         x_min, x_max = np.amin(x_list), np.amax(x_list)
         xs = np.linspace(x_min, x_max, 1000)
@@ -1200,39 +1212,33 @@ def intermediate_list(key, params):
     count_plate = 0
     for i, j in dictionary.items():
         if i == key:
-            for elements in dict_st.values():
-                if len(elements) != 0:
-                    pos1 = elements[count_plate][1]
-                    pos2 = elements[count_plate][2]
-                    pos3 = elements[count_plate + 1][1]
-                    pos4 = elements[count_plate + 1][2]
             count_plate += 2
             params_dictionary[key] = params
             for values in range(len(j)):
                 if values != 0:
                     for value in range(len(j[values])):
                         if value != 0:
-                            if value != pos2 and values != pos1 or value != pos4 and values != pos3:
-                                result = formula2(j[values][value][0], *params)
-                                if np.isnan(result):
-                                    result = str(j[values][value][0])
-                                else:
-                                    if len(seprate_dilution) == 0:
-                                        if len(dilution) == 1:
-                                            result *= int(dilution[0][values + 1][value])
-                                        else:
-                                            for dil in range(len(dilution)):
-                                                if dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 8] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 9]:
-                                                    result *= int(dilution[dil][values+1][value])
+                            result = formula2(j[values][value][0], *params)
+                            if np.isnan(result):
+                                result = str(j[values][value][0])
+                            else:
+                                if len(seprate_dilution) == 0:
+                                    if len(dilution) == 1:
+                                        result *= int(dilution[0][values][value])
                                     else:
-                                        for d in range(len(seprate_dilution)):
-                                            for g in seprate_dilution[d]:
-                                                if g == key[key.index("plate"):key.index("plate") + 7] or g == key[key.index("plate"):key.index("plate") + 8] or g == key[key.index("plate"):key.index("plate") + 9]:
-                                                    result *= int(dilution[d][values+1][value])
+                                        for dil in range(len(dilution)):
+                                            if dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 8] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 9]:
+                                                result *= int(dilution[dil][values][value])
+                                else:
+                                    for d in range(len(seprate_dilution)):
+                                        for g in seprate_dilution[d]:
+                                            if g == key[key.index("plate"):key.index("plate") + 7] or g == key[key.index("plate"):key.index("plate") + 8] or g == key[key.index("plate"):key.index("plate") + 9]:
+                                                result *= int(dilution[d][values][value])
 
-                                    result = round(result, 3)
-                                list1.append([totaal[position][values + 1][value], result])
+                                result = round(result, 3)
+                            list1.append([totaal[position][values + 1][value], result])
                 intermediate_dictionary[i] = list1
+
 
 
 def End_results(request):
@@ -1326,7 +1332,10 @@ def End_results(request):
                             for OD in column:
                                 if int(row_standard) != 0:
                                     if counter < (non_mod_skip - 12) or counter >= non_mod_skip:
-                                        end_result[keys][counter].append(OD[0])
+                                        if int(OD[0]) > 5:
+                                            end_result[keys][counter].append("( + )")
+                                        else:
+                                            end_result[keys][counter].append(OD[0])
                                         end_result[keys][counter].append(well)
                                         end_result[keys][counter].append(plate_number)
                                     counter += 1
@@ -1336,7 +1345,10 @@ def End_results(request):
                                         check_first_col += 12
                                         check_second_col += 12
                                     elif counter != check_first_col:
-                                        end_result[keys][counter].append(OD[0])
+                                        if int(OD[0]) > 5:
+                                            end_result[keys][counter].append("( + )")
+                                        else:
+                                            end_result[keys][counter].append(OD[0])
                                         end_result[keys][counter].append(well)
                                         end_result[keys][counter].append(plate_number)
                                     counter += 1

@@ -6,7 +6,7 @@
 {% block content %}
     {% load static %}
     <link rel="stylesheet" type="text/css"
-          href="{% static 'css/Plate_layout.css' %}">
+          href="{% static 'css/Dilutions.css' %}">
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <div class="plate_top">
@@ -21,7 +21,7 @@
 {% endif %}
 {% if check == 'go' %}
     {% if dilution|length <= 1 %}
-        <div class="plate_st_text">
+        <div class="dilution_text">
             If this dilution isn't for the entire experiment, type which plates this dilution is for. (P.S type
             the names like this: Plate_1, Plate_2, Plate_3, etc...)<br><br>
             <input type="text" name="dilution_1" class="plate_st_input"> <input type="submit" name="plate_belong1" value="Upload data" class="plate_button"/>
