@@ -1533,9 +1533,9 @@ def autosave(minutes_between_saves = 5): #path here is the directory path, Path 
     time = datetime.datetime.now()
     if (time - last_autosave).seconds / 60 >= minutes_between_saves:
         last_autosave = time
-        path = join(Path(settings.BASE_DIR).resolve().parent, "Autosaves")
+        path = join(settings.BASE_DIR, "Autosaves")
         dircontents = listdir(path)
-        session_writeout(time.strftime(join(settings.BASE_DIR, "Autosaves", "Autosave %d-%m-%Y  %H.%M.%S")))
+        session_writeout(time.strftime(join(path, "Autosave %d-%m-%Y  %H.%M.%S")))
         if len(dircontents) > 5:
             remove(min([join(path, session) for session in dircontents], key=getctime)) #Get the oldest file in the dir and remove it
 
@@ -1574,10 +1574,10 @@ def report_writeout(dirname):
         print(key)
         print(value)
     """
-    #Create directory, checking for uniqueness
-    landing = join(settings.BASE_DIR, "temp", dirname)    #join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
+    landing = join(settings.BASE_DIR, "temp", "zipped_results")    #join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
     target = join(settings.BASE_DIR, "temp", "targetdir")
     """
+    #Create directory, checking for uniqueness
     unique, iterations = False, 1
     while not unique:
         try:
@@ -1608,4 +1608,6 @@ def report_writeout(dirname):
                 f.write(str(element) + "\t")
             f.write("\n")
         f.close()
+    #zip it up and make it downloadable
+    shutil.make_archive(landing, 'zip', target)
     return 0
