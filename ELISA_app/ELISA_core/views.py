@@ -13,7 +13,7 @@ import string
 import pickle
 from django.core import serializers
 from django.conf import settings
-from os.path import join, getctime
+from os.path import join, getctime, exists
 from os import sep, listdir, mkdir, remove
 from copy import deepcopy
 import datetime
@@ -1308,7 +1308,11 @@ def End_results(request):
         if request.method == 'POST':
             if request.POST.get('download'):
                 filename = request.POST.get('File_name')
-                report_writeout()
+                target = report_writeout()
+                response = HttpResponse(open(target, 'rb').read())
+                response['Content-Type'] = 'text/plain'
+                response['Content-Disposition'] = f'attachment; filename={filename}.zip'
+                return response
             if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
                     request.POST.get('update_table_S') or request.POST.get('update_table_No'):
                 final_dictionary = {}
@@ -1528,7 +1532,7 @@ def session_readin(session):
             plate.save()
 
 
-def autosave(minutes_between_saves = 5): #path here is the directory path, Path refers to the resolve lib, should probably rename the import?
+def autosave(minutes_between_saves = 5):
     global last_autosave
     time = datetime.datetime.now()
     if (time - last_autosave).seconds / 60 >= minutes_between_saves:
@@ -1540,7 +1544,7 @@ def autosave(minutes_between_saves = 5): #path here is the directory path, Path 
             remove(min([join(path, session) for session in dircontents], key=getctime)) #Get the oldest file in the dir and remove it
 
 
-def report_writeout(dirname):
+def report_writeout():
     #todo stuff for better report function visualisation, not finished
     """
     global flow
@@ -1576,6 +1580,8 @@ def report_writeout(dirname):
     """
     landing = join(settings.BASE_DIR, "temp", "zipped_results")    #join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
     target = join(settings.BASE_DIR, "temp", "targetdir")
+    shutil.rmtree(target, ignore_errors=True)
+    mkdir(target)
     """
     #Create directory, checking for uniqueness
     unique, iterations = False, 1
@@ -1609,5 +1615,7 @@ def report_writeout(dirname):
             f.write("\n")
         f.close()
     #zip it up and make it downloadable
+    if exists(landing+".zip"):
+        remove(landing+".zip")
     shutil.make_archive(landing, 'zip', target)
-    return 0
+    return landing+".zip"
