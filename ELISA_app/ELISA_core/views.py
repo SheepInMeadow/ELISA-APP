@@ -93,6 +93,7 @@ def Home(request):
     Function:
         - Renders the template Home.html when the page is visited.
     """
+    print(settings.BASE_DIR)
     return render(request, 'Home.html', {
             'version': version_number,
         })
