@@ -11,3 +11,8 @@
     position: relative;
     float: right;
 }
+
+.input{
+    font-size: 15pt;
+    font-family: "Arial", serif;
+}

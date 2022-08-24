@@ -21,6 +21,7 @@
         above: {{unit}} over linear part of calibration line<br>
     </p>
      {% if check == 'go_low' %}
+    <p class="spacing_end">The upper detection is: {{upper}} </p>
     <table style="float: left;" class="spacing">
         <thead>
             <th>Sample ID</th>
@@ -37,6 +38,7 @@
     </table>
     {% endif %}
     {% if check == 'go_up' %}
+    <p class="spacing_end">The lower detection is: {{lower}} </p>
     <table style="float: left;" class="spacing">
         <thead>
             <th>Sample ID</th>
