@@ -60,7 +60,6 @@ def reset_data():
     global elisa_type; elisa_type = ''
     global cut_off_type; cut_off_type = ''
     global divide_number; divide_number = 0
-    global seprate_dilution; seprate_dilution = []
     global st_finder; st_finder = []
     global dict_st; dict_st = {}
     global list_st_values; list_st_values = []
@@ -375,77 +374,71 @@ def Plate_layout(request):
            submitted and render the page.
     """
     global check, totaal, row_standard, column_standard, elisa_type, cut_off_type, unit_name, standard, cut_data, flow
-    try:
-        if request.method == 'POST':
-            if request.POST.get('file_submit'):
-                elisa_type = request.POST.get('elisa_type')
-                cut_off_type = request.POST.get('cut-off_type')
-                row_standard = request.POST.get('row_input')
-                column_standard = request.POST.get('column_input')
-                flow['Select data input type'] = {"1":"Modified/Non-modified ELISA", "2":"General ELISA"}["2"] #todo go for [elisa_type] and replace "2"
-                flow['Cut-off or no cut-off'] = {"1":"I want to use HDs to calculate a cut-off", "2":"I don’t want to calculate a cut-off"}[cut_off_type if cut_off_type != None else "1"]
-                if row_standard == None:
-                    row_standard = 0
-                if column_standard == None:
-                    column_standard = [0, 0]
-                else:
-                    column_standard = column_standard.split(',')
-            if request.POST.get('file_submit'):
-                totaal = []
-                if request.FILES.getlist("my_file") == []:
-                    check = 'error'
-                    return render(request, 'Plate_layout.html', {
-                        'check': check, 'totaal': totaal,'row_input': row_standard,
-                        'column_input': str(column_standard[0]) + ',' + str(column_standard[1]), 'elisa_type': elisa_type,
-                        'cut_off_type': cut_off_type,
-                    })
-                excel_data = Plate_layout_1(request, "P")
-                flow["Plate Layout"] = excel_data #flowline
-                totaal = Plate_layout_2(excel_data)
-                check = 'go'
+    if request.method == 'POST':
+        if request.POST.get('file_submit'):
+            elisa_type = request.POST.get('elisa_type')
+            cut_off_type = request.POST.get('cut-off_type')
+            row_standard = request.POST.get('row_input')
+            column_standard = request.POST.get('column_input')
+            flow['Select data input type'] = {"1":"Modified/Non-modified ELISA", "2":"General ELISA"}["2"] #todo go for [elisa_type] and replace "2"
+            flow['Cut-off or no cut-off'] = {"1":"I want to use HDs to calculate a cut-off", "2":"I don’t want to calculate a cut-off"}[cut_off_type if cut_off_type != None else "1"]
+            if row_standard == None:
+                row_standard = 0
+            if column_standard == None:
+                column_standard = [0, 0]
+            else:
+                column_standard = column_standard.split(',')
+        if request.POST.get('file_submit'):
+            totaal = []
+            if request.FILES.getlist("my_file") == []:
+                check = 'error'
                 return render(request, 'Plate_layout.html', {
-                    'totaal': totaal,
-                    'check': check,'row_input': row_standard,
+                    'check': check, 'totaal': totaal,'row_input': row_standard,
                     'column_input': str(column_standard[0]) + ',' + str(column_standard[1]), 'elisa_type': elisa_type,
-                        'cut_off_type': cut_off_type,
+                    'cut_off_type': cut_off_type,
                 })
-            if request.POST.get('standaard_input'):
-                cut_data = []
-                elisa_type = request.POST.get('elisa_type')
-                cut_off_type = request.POST.get('cut-off_type')
-                row_standard = request.POST.get('row_input')
-                column_standard = request.POST.get('column_input')
-                if row_standard == None:
-                    row_standard = 0
-                if column_standard == None:
-                    column_standard = [0, 0]
-                else:
-                    column_standard = column_standard.split(',')
-                Plate_layout_3(request)
-                standard = request.POST.get('standaard')
-                unit_name = request.POST.get('unit')
-                flow['ST values of all plates'] = request.POST.get('standaard')
-                flow['Divide number'] = request.POST.get('divide')
-                check = 'go'
-                return render(request, 'Plate_layout.html', {
-                    'totaal': totaal, 'check': check, 'row_input': row_standard,
-                    'column_input': str(column_standard[0]) + ',' + str(column_standard[1]),
-                    'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
-                        'cut_off_type': cut_off_type,
-                })
-        else:
+            excel_data = Plate_layout_1(request, "P")
+            flow["Plate Layout"] = excel_data #flowline
+            totaal = Plate_layout_2(excel_data)
+            check = 'go'
+            return render(request, 'Plate_layout.html', {
+                'totaal': totaal,
+                'check': check,'row_input': row_standard,
+                'column_input': str(column_standard[0]) + ',' + str(column_standard[1]), 'elisa_type': elisa_type,
+                    'cut_off_type': cut_off_type,
+            })
+        if request.POST.get('standaard_input'):
+            cut_data = []
+            elisa_type = request.POST.get('elisa_type')
+            cut_off_type = request.POST.get('cut-off_type')
+            row_standard = request.POST.get('row_input')
+            column_standard = request.POST.get('column_input')
+            if row_standard == None:
+                row_standard = 0
+            if column_standard == None:
+                column_standard = [0, 0]
+            else:
+                column_standard = column_standard.split(',')
+            Plate_layout_3(request)
+            standard = request.POST.get('standaard')
+            unit_name = request.POST.get('unit')
+            flow['ST values of all plates'] = request.POST.get('standaard')
+            flow['Divide number'] = request.POST.get('divide')
+            check = 'go'
             return render(request, 'Plate_layout.html', {
                 'totaal': totaal, 'check': check, 'row_input': row_standard,
                 'column_input': str(column_standard[0]) + ',' + str(column_standard[1]),
                 'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
-                        'cut_off_type': cut_off_type,
+                    'cut_off_type': cut_off_type,
             })
-    except:
-        row_standard = 0
-        column_standard = [0, 0]
-        return render(request, 'Error.html', {
-            'error': 'There was an incorrect input. Please return to the Plate Layout page and try again.',
+    else:
+        return render(request, 'Plate_layout.html', {
+            'totaal': totaal, 'check': check, 'row_input': row_standard,
+            'column_input': str(column_standard[0]) + ',' + str(column_standard[1]),
+            'standard': standard, 'divide': divide_number, 'unit': unit_name, 'elisa_type': elisa_type,
+                    'cut_off_type': cut_off_type,
         })
+
 
 def Plate_layout_1(request, check_type):
     """
@@ -779,8 +772,8 @@ def Visualize_data(request):
         return render(request, 'Visualize_data.html', {
             'dictionary': dictionary,
             'cut_off_type': cut_off_type,
-        })
-    except:
+    })
+    except: #todo should specify this
          return render(request, 'Error.html', {
              'error': 'An error occurred, please be sure to load in the plate layout file and choose a ST value on the '
                       'Plate Layout page.',
@@ -1192,7 +1185,7 @@ def Intermediate_result(request):
             'limit_list' : low_list,
             'check' : 'go_low'
         })
-    except:
+    except: #todo specify this
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have selected the healthy donor plate and confirming '
                      'your preferences on the visualize Data page.'
@@ -1313,13 +1306,8 @@ def End_results(request):
         OD_multiplier2 = 'nothing'
         if request.method == 'POST':
             if request.POST.get('download'):
-                file_name = request.POST.get('File_name')
-                textfile = open("../Download_files/" + file_name + ".txt", "w")
-                for elements in final_list:
-                    for element in elements:
-                        textfile.write(str(element) + "\t")
-                    textfile.write("\n")
-                textfile.close()
+                filename = request.POST.get('File_name')
+                report_writeout()
             if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
                     request.POST.get('update_table_S') or request.POST.get('update_table_No'):
                 final_dictionary = {}
@@ -1502,9 +1490,9 @@ def End_results(request):
             'elisa_type': elisa_type,
             'cut_off_type': cut_off_type,
         })
-    except:
+    except KeyboardInterrupt:
         return render(request, 'Error.html', {
-         'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
+            'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
         })
 
 
@@ -1515,7 +1503,8 @@ def session_writeout(session_name):  # Note: currently used pickle version = 4, 
                      points_dictionary, mean_ST_dictionary, mean,
                      std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
                      intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au,
-                     unit_name, row_standard, column_standard, elisa_type, cut_off_type,
+                     unit_name, row_standard, column_standard, elisa_type, cut_off_type, divide_number,
+                     seprate_dilution, st_finder, dict_st, list_st_values, standard, rule,
                      serializers.serialize("xml", Plates.objects.all())), f, protocol=4)  # Plates.objects is serialized to xml, preventing upgrading issues with Django
         print("pickle success")
         f.close()
@@ -1527,7 +1516,8 @@ def session_readin(session):
         "points_dictionary", "mean_ST_dictionary", "mean",
         "std", "mean2", "std2", "check_cut_off", "cut_data", "outlier_value", "cut_off_value", "end_result", "lower",
         "upper", "intermediate_dictionary", "params_dictionary", "final_dictionary", "final_list", "cut_off_value_au",
-        "unit_name", "row_standard", "column_standard", "elisa_type", "cut_off_type")
+        "unit_name", "row_standard", "column_standard", "elisa_type", "cut_off_type", "divide_number",
+        "seprate_dilution", "st_finder", "dict_st", "list_st_values", "standard", "rule")
 
     with session as f:
         sessiontuple = pickle.load(f)
