@@ -9,17 +9,6 @@
     {% load static %}
         <link rel="stylesheet" type="text/css"
           href="{% static 'css/home.css' %}">
-    {# START PICKLE MAGIC #}
-    <form method="POST">
-        {% csrf_token %}
-        <input type="submit" value="download pickle" name="download_pickle" class="button"><br>
-    </form>
-    <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        <input type="file" name="my_pickle" class="input_file" multiple/>
-        <input type="submit" name="submit_pickle" value="submit pickle" class="input_button_file"/>
-    </form>
-    {# END PICKLE MAGIC #}
     <div class="middle">
     <div class="wrapper" style="overflow: hidden; background-color: white">
         <div class="infocard">

@@ -60,7 +60,6 @@ def reset_data():
     global elisa_type; elisa_type = ''
     global cut_off_type; cut_off_type = ''
     global divide_number; divide_number = 0
-    global seprate_dilution; seprate_dilution = []
     global st_finder; st_finder = []
     global dict_st; dict_st = {}
     global list_st_values; list_st_values = []
@@ -1308,13 +1307,8 @@ def End_results(request):
         OD_multiplier2 = 'nothing'
         if request.method == 'POST':
             if request.POST.get('download'):
-                file_name = request.POST.get('File_name')
-                textfile = open("../Download_files/" + file_name + ".txt", "w")
-                for elements in final_list:
-                    for element in elements:
-                        textfile.write(str(element) + "\t")
-                    textfile.write("\n")
-                textfile.close()
+                filename = request.POST.get('File_name')
+                report_writeout()
             if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
                     request.POST.get('update_table_S') or request.POST.get('update_table_No'):
                 final_dictionary = {}
@@ -1492,7 +1486,7 @@ def End_results(request):
             'elisa_type': elisa_type,
             'cut_off_type': cut_off_type,
         })
-    except:
+    except KeyboardInterrupt:
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
         })
