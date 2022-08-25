@@ -1419,8 +1419,8 @@ def End_results(request):
                                                             final_dictionary[sampleID] = end_variable
                                                     elif request.POST.get('update_table_H'):
                                                         rule = 2
-                                                        OD_multiplier = request.POST.get('OD_higher')
-                                                        if (values[counter2][2]) - (values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
+                                                        OD_add = request.POST.get('OD_higher')
+                                                        if (values[counter2][2]) - (values[counter2 + non_mod_count][2]) >= int(OD_add):
                                                             final_dictionary[sampleID] = end_variable
                                                     elif request.POST.get('update_table_No'):
                                                         rule = 4
@@ -1428,22 +1428,21 @@ def End_results(request):
                                                     elif request.POST.get('update_table_S'):
                                                         rule = 3
                                                         OD_multiplier = request.POST.get('OD_multiplier')
+                                                        OD_add = request.POST.get('OD_higher')
                                                         OD_multiplier2 = request.POST.get('reference')
-                                                        if OD_multiplier == '':
-                                                            OD_multiplier = request.POST.get('OD_higher')
-                                                            if OD_multiplier != '':
-                                                                rule = '2 and 3'
-                                                                if (values[counter2][2]) - (
-                                                                values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
-                                                                    if (round(elements[1])) >= int(OD_multiplier2):
-                                                                        final_dictionary[sampleID] = end_variable
-                                                        elif OD_multiplier != None:
+                                                        if OD_add != '':
+                                                            rule = '2 and 3'
+                                                            if (values[counter2][2]) - (
+                                                            values[counter2 + non_mod_count][2]) >= int(OD_add):
+                                                                if (round(elements[1])) >= int(OD_multiplier2):
+                                                                    final_dictionary[sampleID] = end_variable
+                                                        elif OD_multiplier != '':
                                                             rule = '1 and 3'
                                                             if (values[counter2][2]) / (
                                                             values[counter2 + non_mod_count][2]) >= int(OD_multiplier):
                                                                 if (round(elements[1])) >= int(OD_multiplier2):
                                                                     final_dictionary[sampleID] = end_variable
-                                                        else:
+                                                        elif OD_multiplier2 != '':
                                                             if (round(elements[1])) >= int(OD_multiplier2):
                                                                 final_dictionary[sampleID] = end_variable
                                         if sampleID not in final_dictionary:
@@ -1498,7 +1497,7 @@ def End_results(request):
             'elisa_type': elisa_type,
             'cut_off_type': cut_off_type,
         })
-    except KeyboardInterrupt:
+    except:
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
         })
@@ -1532,8 +1531,8 @@ def session_readin(session):
         # [:-1] to exclude serialized plate db
         for data, var in zip(sessiontuple[:-1], varlist):
             globals()[var] = data
-            print(var)
-            print(data, end="\n\n")
+            # print(var)
+            # print(data, end="\n\n")
         # start plate db readin
         Plates.objects.all().delete()
         for plate in serializers.deserialize("xml", sessiontuple[-1]):
