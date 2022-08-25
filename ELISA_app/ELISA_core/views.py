@@ -13,7 +13,7 @@ import string
 import pickle
 from django.core import serializers
 from django.conf import settings
-from os.path import join, getctime
+from os.path import join, getctime, exists
 from os import sep, listdir, mkdir, remove
 from copy import deepcopy
 import datetime
@@ -23,7 +23,7 @@ from pathlib import Path
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-version_number = 1.2
+version_number = 1.21
 
 def reset_data():
     #set globals
@@ -1311,7 +1311,11 @@ def End_results(request):
         if request.method == 'POST':
             if request.POST.get('download'):
                 filename = request.POST.get('File_name')
-                report_writeout()
+                target = report_writeout()
+                response = HttpResponse(open(target, 'rb').read())
+                response['Content-Type'] = 'text/plain'
+                response['Content-Disposition'] = f'attachment; filename={filename}.zip'
+                return response
             if request.POST.get('update_table_M') or request.POST.get('update_table_H') or\
                     request.POST.get('update_table_S') or request.POST.get('update_table_No'):
                 final_dictionary = {}
@@ -1536,19 +1540,19 @@ def session_readin(session):
             plate.save()
 
 
-def autosave(minutes_between_saves = 5): #path here is the directory path, Path refers to the resolve lib, should probably rename the import?
+def autosave(minutes_between_saves = 5):
     global last_autosave
     time = datetime.datetime.now()
     if (time - last_autosave).seconds / 60 >= minutes_between_saves:
         last_autosave = time
-        path = join(Path(settings.BASE_DIR).resolve().parent, "Autosaves")
+        path = join(settings.BASE_DIR, "Autosaves")
         dircontents = listdir(path)
-        session_writeout(time.strftime(join(settings.BASE_DIR, "Autosaves", "Autosave %d-%m-%Y  %H.%M.%S")))
+        session_writeout(time.strftime(join(path, "Autosave %d-%m-%Y  %H.%M.%S")))
         if len(dircontents) > 5:
             remove(min([join(path, session) for session in dircontents], key=getctime)) #Get the oldest file in the dir and remove it
 
 
-def report_writeout(dirname):
+def report_writeout():
     #todo stuff for better report function visualisation, not finished
     """
     global flow
@@ -1582,10 +1586,12 @@ def report_writeout(dirname):
         print(key)
         print(value)
     """
-    #Create directory, checking for uniqueness
-    landing = join(settings.BASE_DIR, "temp", dirname)    #join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
+    landing = join(settings.BASE_DIR, "temp", "zipped_results")    #join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
     target = join(settings.BASE_DIR, "temp", "targetdir")
+    shutil.rmtree(target, ignore_errors=True)
+    mkdir(target)
     """
+    #Create directory, checking for uniqueness
     unique, iterations = False, 1
     while not unique:
         try:
@@ -1616,4 +1622,8 @@ def report_writeout(dirname):
                 f.write(str(element) + "\t")
             f.write("\n")
         f.close()
-    return 0
+    #zip it up and make it downloadable
+    if exists(landing+".zip"):
+        remove(landing+".zip")
+    shutil.make_archive(landing, 'zip', target)
+    return landing+".zip"
