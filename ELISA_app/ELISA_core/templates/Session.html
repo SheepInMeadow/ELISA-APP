@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %} Session {% endblock %}
+{% block header %} Session {% endblock %}
+
+{% block content %}
+    {% load static %}
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'css/Input_data.css' %}">
+        {# START PICKLE MAGIC #}
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="input_text">Upload session:</div><br>
+        <input type="file" name="my_pickle" class="input_file"/>
+        <input type="submit" name="submit_pickle" value="Upload session" class="input_button_file"/>
+    </form><br>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="input_text">Download session:</div>
+        <div class="input_text">
+            Session name: <input type="text" name="Session_name" class="input" value="">
+            <input type="submit" value="Download session" name="download_pickle" class="button"><br><br><br>
+        </div>
+    </form>
+    {# END PICKLE MAGIC #}
+    {% if check == 'pickle_download' %}
+        <p class="message_succes">Session was successfully downloaded.</p>
+    {% endif %}
+    {% if check == 'pickle_upload' %}
+        <p class="message_succes">Session was successfully uploaded.</p>
+    {% endif %}
+    {% if check == 'fail' %}
+        <p class="message_fail">Session action failed, please check if you uploaded the right file!</p>
+    {% endif %}
+{% endblock %}

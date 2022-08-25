@@ -98,6 +98,27 @@ def Home(request):
             'version': version_number,
         })
 
+def Session(request):
+    try:
+        if request.POST.get('download_pickle'):
+            sessionloc = session_writeout("Manual Session")
+            filename = request.POST.get('Session_name')
+            response = HttpResponse(open(sessionloc, 'rb').read())
+            response['Content-Type'] = 'text/plain'
+            response['Content-Disposition'] = f'attachment; filename={filename}.ELISA_App'
+            return response
+        elif request.POST.get('submit_pickle'):
+            session_readin(request.FILES['my_pickle'])
+            return render(request, 'Session.html', {
+                'check': "pickle_upload",
+            })
+        return render(request, 'Session.html', {
+
+        })
+    except KeyboardInterrupt: #todo should specify this, change to KeybaordInterrupt or whatever if you wanna know the error for now
+        return render(request, 'Session.html', {
+            'check': 'fail',
+        })
 
 def Input_data(request):
     """
@@ -115,20 +136,6 @@ def Input_data(request):
     """
     try:
         if request.method == 'POST':
-            #start pickle magic
-            if request.POST.get('download_pickle'):
-                session_writeout("Manual Session")
-                filename = request.POST.get('Session_name')
-                response = HttpResponse(open("Manual Session.ELISA_App", 'rb').read())
-                response['Content-Type'] = 'text/plain'
-                response['Content-Disposition'] = f'attachment; filename={filename}.ELISA_App'
-                return response
-            elif request.POST.get('submit_pickle'):
-                session_readin(request.FILES['my_pickle'])
-                return render(request, 'Input_data.html', {
-                    'check': "pickle_upload",
-                })
-            #end pickle magic
             error = 'correct'
             if request.POST.get('Empty database'):
                 reset_data()

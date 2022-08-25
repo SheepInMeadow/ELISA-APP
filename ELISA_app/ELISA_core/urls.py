@@ -29,4 +29,5 @@ urlpatterns = [
     path('Cut_off', Cut_off),
     path('Intermediate_result', Intermediate_result),
     path('End_results', End_results),
+    path('Session', Session),
 ]
