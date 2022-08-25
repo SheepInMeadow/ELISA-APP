@@ -1404,13 +1404,13 @@ def End_results(request):
                                             if float(elements[1]) <= float(upper):
                                                 if elements[1] >= float(cut_off_value_au):
                                                     if elisa_type == '1':
-                                                        end_variable = [keys, values[counter2][4],
-                                                                        values[counter2][3], str(elements[0]), 1,
+                                                        end_variable = [keys, str(values[counter2][3]), str(values[counter2][4]),
+                                                                         str(elements[0]), 1,
                                                                         round(elements[1]), values[counter2][2],
                                                                         values[counter2 + non_mod_count][2]]
                                                     else:
-                                                        end_variable = [keys, values[counter2][4],
-                                                                        values[counter2][3], str(elements[0]), 1,
+                                                        end_variable = [keys, str(values[counter2][3]), str(values[counter2][4]),
+                                                                         str(elements[0]), 1,
                                                                         round(elements[1]), values[counter2][2]]
                                                     if request.POST.get('update_table_M'):
                                                         rule = 1
@@ -1448,32 +1448,29 @@ def End_results(request):
                                         if sampleID not in final_dictionary:
                                             if float(elements[1]) < float(lower):
                                                 if elisa_type == '1':
-                                                    final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
+                                                    final_dictionary[sampleID] = [keys, str(values[counter2][3]), str(values[counter2][4]),
                                                                               str(elements[0]), 0, '<' + str(lower),
                                                                               values[counter2][2], values[counter2 + non_mod_count][2]]
                                                 else:
-                                                    final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                                  values[counter2][3],
+                                                    final_dictionary[sampleID] = [keys, str(values[counter2][3]), str(values[counter2][4]),
                                                                                   str(elements[0]), 0, '<' + str(lower),
                                                                                   values[counter2][2]]
                                             elif float(elements[1]) >= float(upper):
                                                 if elisa_type == '1':
-                                                    final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
+                                                    final_dictionary[sampleID] = [keys, str(values[counter2][3]), str(values[counter2][4]),
                                                                               str(elements[0]), 1, '>' + str(upper),
                                                                               values[counter2][2], values[counter2 + non_mod_count][2]]
                                                 else:
-                                                    final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                                  values[counter2][3],
+                                                    final_dictionary[sampleID] = [keys, str(values[counter2][3]), str(values[counter2][4]),
                                                                                   str(elements[0]), 1, '>' + str(upper),
                                                                                   values[counter2][2]]
                                             else:
                                                 if elisa_type == '1':
-                                                    final_dictionary[sampleID] = [keys, values[counter2][4], values[counter2][3],
+                                                    final_dictionary[sampleID] = [keys, str(values[counter2][3]), str(values[counter2][4]),
                                                                                   str(elements[0]), 0, round(float(elements[1])),
                                                                                   values[counter2][2], values[counter2 + non_mod_count][2]]
                                                 else:
-                                                    final_dictionary[sampleID] = [keys, values[counter2][4],
-                                                                                  values[counter2][3],
+                                                    final_dictionary[sampleID] = [keys, str(values[counter2][3]), str(values[counter2][4]),
                                                                                   str(elements[0]), 0,
                                                                                   round(float(elements[1])),
                                                                                   values[counter2][2]]
@@ -1484,7 +1481,9 @@ def End_results(request):
                                 counter = 0
                 for i, lists in final_dictionary.items():
                     final_list.append(lists)
-                final_list = sorted(final_list, key=itemgetter(3))
+                final_list = sorted(final_list, key=itemgetter(0, 2, 1))
+                for i in final_list:
+                    i[1 : 3] = [''.join(i[1 : 3])]
         return render(request, 'End_results.html', {
             'final_list': final_list,
             'upper': upper,
@@ -1497,7 +1496,7 @@ def End_results(request):
             'elisa_type': elisa_type,
             'cut_off_type': cut_off_type,
         })
-    except:
+    except KeyboardInterrupt:
         return render(request, 'Error.html', {
             'error': 'An error occurred, please make sure you have submitted all the settings on previous pages.'
         })
