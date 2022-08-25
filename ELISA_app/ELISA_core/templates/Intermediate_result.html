@@ -4,6 +4,9 @@
 {% block header %} Intermediate Results {% endblock %}
 
 {% block content %}
+{% load static %}
+    <link rel="stylesheet" type="text/css"
+          href="{% static 'css/Intermediate_result.css' %}">
     <form method="POST">
         {% csrf_token %}
         {% if check == 'go_low' %}
@@ -23,6 +26,7 @@
      {% if check == 'go_low' %}
     <p class="spacing_end">The upper detection is: {{upper}} </p>
     <table style="float: left;" class="spacing">
+        <caption>This table shows only the last 20 lower and the 20 first linear</caption>
         <thead>
             <th>Sample ID</th>
             <th>{{unit}}</th>
@@ -39,7 +43,8 @@
     {% endif %}
     {% if check == 'go_up' %}
     <p class="spacing_end">The lower detection is: {{lower}} </p>
-    <table style="float: left;" class="spacing">
+    <table style="float: left;" class="table1">
+        <caption>This table shows only the last 20 linear and the 20 first upper</caption>
         <thead>
             <th>Sample ID</th>
             <th>{{unit}}</th>
@@ -54,8 +59,9 @@
         {% endfor %}
     </table>
     {% endif %}
-    <table style="display: inline-block;" class="spacing">
-        <thead>
+    <table style="display: inline-block;" class="table2">
+        <caption>This table shows everything<br><br></caption>
+         <thead>
             <th>Sample ID</th>
             <th>{{unit}}</th>
             <th>below, linear, above</th>

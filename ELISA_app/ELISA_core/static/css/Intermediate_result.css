@@ -9,21 +9,22 @@
     font-family: "Arial", serif;
 }
 
-table {
-    color: #333;
-    background: white;
-    border: 1px solid grey;
-    border-collapse: collapse;
-}
-
 td, th {
     border: 1px solid grey;
 }
 
-.right_table {
-    margin-left: 50%;
-    margin-top: 20%;
+.table1 {
+    margin-left: 2%;
     font-size: 15pt;
     font-family: "Arial", serif;
+    border-collapse: collapse;
+    border: 1px solid grey;
+}
 
+.table2 {
+    margin-left: 2%;
+    font-size: 15pt;
+    font-family: "Arial", serif;
+    border-collapse: collapse;
+    border: 1px solid grey;
 }

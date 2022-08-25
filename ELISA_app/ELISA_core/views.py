@@ -93,6 +93,7 @@ def Home(request):
     Function:
         - Renders the template Home.html when the page is visited.
     """
+    print(settings.BASE_DIR)
     return render(request, 'Home.html', {
             'version': version_number,
         })
@@ -242,7 +243,11 @@ def formatting_xlsx(file_name):
         excel_data[1].insert(0, '#')
         for i in excel_data:
             for j in i:
-                data_string += j + "="
+                if j != 'None' and j != ' ':
+                    if j == '( + )':
+                        data_string += '10' + "="
+                    else:
+                        data_string += j + "="
     return data_string
 
 
@@ -312,7 +317,8 @@ def formatting_xls(file_name):
     excel_data[1].insert(0, '#')
     for i in excel_data:
         for j in i:
-            data_string += j + "="
+            if j != 'None' and j != ' ':
+                data_string += j + "="
     return data_string
 
 
@@ -483,7 +489,7 @@ def Plate_layout_2(excel_data):
     tot_rows = len(excel_data)
     for x in range(len(excel_data)):
         if x != 0:
-            if 'late ' in excel_data[x][0]:
+            if 'late' in excel_data[x][0]:
                 rows = x-1
                 break
             else:
@@ -501,7 +507,7 @@ def Plate_layout_2(excel_data):
                 length_empty = len(k)
             temp.append(k)
             counter += 1
-            if counter == rows:
+            if counter == (rows):
                 totaal.append(temp)
                 counter = 0
                 temp = []
@@ -547,7 +553,7 @@ def Plate_layout_3(request):
                         if index == 0 and str(i[j][k]).lower() == 'st_1':
                             st_finder = [0, j, k]
                         i[j][k] = round(float(list_divide[d]), 3)
-                    elif i[j][k] == 'Blank':
+                    elif str(i[j][k]).lower() == 'blanco':
                         i[j][k] = "#"
                     elif len(list_st_values) != 0:
                         if d <= 7:
@@ -791,7 +797,8 @@ def create_graph(dictionary):
     global mean_ST_dictionary
     conc = totaal[st_finder[0]][st_finder[1]][st_finder[2]]
     x_list = [conc]
-    for i in range(6):
+    number_loop = len(totaal[0]) - 4
+    for i in range(number_loop):
         conc = float(conc)/int(divide_number)
         x_list.append(conc)
     y_list = []
@@ -807,7 +814,6 @@ def create_graph(dictionary):
                 mean = ((float(values[pos1-1][pos2][0]) + float(values[pos3-1][pos4][0]))/2)
                 temp.append(round(mean, 3))
         count_plate += 2
-        temp.pop()
         y_list.append(temp)
         temp = []
     counter = 0
@@ -817,7 +823,7 @@ def create_graph(dictionary):
     counter = 0
     for key in dictionary:
         guess = [1, 1, 1, 1, 1]
-        params, params_coveriance = optimization.curve_fit(formula, x_list, y_list[counter], guess)
+        params, params_coveriance = optimization.curve_fit(formula, x_list, y_list[counter], guess, maxfev=5000)
         intermediate_list(key, params)
         x_min, x_max = np.amin(x_list), np.amax(x_list)
         xs = np.linspace(x_min, x_max, 1000)
@@ -1214,18 +1220,12 @@ def intermediate_list(key, params):
     count_plate = 0
     for i, j in dictionary.items():
         if i == key:
-            for elements in dict_st.values():
-                if len(elements) != 0:
-                    pos1 = elements[count_plate][1]
-                    pos2 = elements[count_plate][2]
-                    pos3 = elements[count_plate + 1][1]
-                    pos4 = elements[count_plate + 1][2]
             count_plate += 2
             params_dictionary[key] = params
             for values in range(len(j)):
                 if values != 0:
                     for value in range(len(j[values])):
-                        if value != 0 and value != 1 and value != 2:
+                        if value != 0:
                             result = formula2(j[values][value][0], *params)
                             if np.isnan(result):
                                 result = str(j[values][value][0])
@@ -1238,25 +1238,18 @@ def intermediate_list(key, params):
                                             result *= int(dilution[0][values][value])
                                     else:
                                         for dil in range(len(dilution)):
-                                            if dilution[dil][0][0] in key:
-                                                result *= int(dilution[dil][values+1][value])
+                                            if dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 8] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 9]:
+                                                result *= int(dilution[dil][values][value])
                                 else:
-                                    if len(seprate_dilution) == 0:
-                                        if len(dilution) == 1:
-                                            result *= int(dilution[0][values + 1][value])
-                                        else:
-                                            for dil in range(len(dilution)):
-                                                if dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 7] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 8] or dilution[dil][0][0].lower() == key[key.index("plate"):key.index("plate") + 9]:
-                                                    result *= int(dilution[dil][values+1][value])
-                                    else:
-                                        for d in range(len(seprate_dilution)):
-                                            for g in seprate_dilution[d]:
-                                                if g == key[key.index("plate"):key.index("plate") + 7] or g == key[key.index("plate"):key.index("plate") + 8] or g == key[key.index("plate"):key.index("plate") + 9]:
-                                                    result *= int(dilution[d][values+1][value])
+                                    for d in range(len(seprate_dilution)):
+                                        for g in seprate_dilution[d]:
+                                            if g == key[key.index("plate"):key.index("plate") + 7] or g == key[key.index("plate"):key.index("plate") + 8] or g == key[key.index("plate"):key.index("plate") + 9]:
+                                                result *= int(dilution[d][values][value])
 
-                                    result = round(result, 3)
-                                list1.append([totaal[position][values + 1][value], result])
+                                result = round(result, 3)
+                            list1.append([totaal[position][values + 1][value], result])
                 intermediate_dictionary[i] = list1
+
 
 
 def End_results(request):
@@ -1349,7 +1342,10 @@ def End_results(request):
                                 for OD in column:
                                     if int(row_standard) != 0:
                                         if counter < (non_mod_skip - 12) or counter >= non_mod_skip:
-                                            end_result[keys][counter].append(OD[0])
+                                            if int(OD[0]) > 5:
+                                                end_result[keys][counter].append("( + )")
+                                            else:
+                                                end_result[keys][counter].append(OD[0])
                                             end_result[keys][counter].append(well)
                                             end_result[keys][counter].append(plate_number)
                                         counter += 1
@@ -1359,7 +1355,10 @@ def End_results(request):
                                             check_first_col += 12
                                             check_second_col += 12
                                         elif counter != check_first_col:
-                                            end_result[keys][counter].append(OD[0])
+                                            if int(OD[0]) > 5:
+                                                end_result[keys][counter].append("( + )")
+                                            else:
+                                                end_result[keys][counter].append(OD[0])
                                             end_result[keys][counter].append(well)
                                             end_result[keys][counter].append(plate_number)
                                         counter += 1
@@ -1402,7 +1401,6 @@ def End_results(request):
                                 if counter < non_mod_limit:
                                     if non_mod_check:
                                         if float(elements[1]) >= float(lower):
-
                                             if float(elements[1]) <= float(upper):
                                                 if elements[1] >= float(cut_off_value_au):
                                                     if elisa_type == '1':
