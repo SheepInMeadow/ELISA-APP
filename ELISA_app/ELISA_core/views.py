@@ -14,7 +14,7 @@ import pickle
 from django.core import serializers
 from django.conf import settings
 from os.path import join, getctime, exists
-from os import sep, listdir, mkdir, remove
+from os import sep, listdir, mkdir, remove, rmdir
 from copy import deepcopy
 import datetime
 import shutil
@@ -66,6 +66,7 @@ def reset_data():
     global standard; standard = 0
     global rule; rule = 'none'
     global flow; flow = {}
+    global formulas; formulas = []
     global last_autosave; last_autosave = datetime.datetime(1970, 1, 1, 0, 0)
     #empty plates from db
     Plates.objects.all().delete()
@@ -93,7 +94,6 @@ def Home(request):
     Function:
         - Renders the template Home.html when the page is visited.
     """
-    print(settings.BASE_DIR)
     return render(request, 'Home.html', {
             'version': version_number,
         })
@@ -911,6 +911,7 @@ def Cut_off(request):
         global outlier_value
         global cut_off_value
         global elisa_type
+        global formulas
         cut_dict = {}
         if cut_off_type == '2':
             return render(request, 'Error.html', {
@@ -922,7 +923,8 @@ def Cut_off(request):
                 input1 = request.POST.get('input1')
                 input2 = request.POST.get('input2')
                 outlier_value = (float(input1) * mean) + (float(input2) * std)
-                outlier_value = round(outlier_value, 3) #TODO Flow for formula and outlier
+                formulas.append(f"Outlier formula: {input1} * {mean} + {input2} * {std} = {outlier_value}")
+                outlier_value = round(outlier_value, 3)
                 new_y_list = []
                 for data in cut_data:
                     if data < outlier_value:
@@ -949,7 +951,8 @@ def Cut_off(request):
                 input3 = request.POST.get('input3')
                 input4 = request.POST.get('input4')
                 cut_off_value = (float(input3) * mean2) + (float(input4) * std2)
-                cut_off_value = round(cut_off_value, 3) #TODO Flow for formula and cut-off
+                formulas.append(f"Outlier formula: {input3} * {mean2} + {input4} * {std2} = {outlier_value}")
+                cut_off_value = round(cut_off_value, 3)
                 return render(request, 'Cut_off.html', {
                     'mean': mean,
                     'std': std,
@@ -1505,16 +1508,36 @@ def End_results(request):
 
 
 def session_writeout(session_name):  # Note: currently used pickle version = 4, supported from py 3.4 and default from py 3.8
-    session_name += ".ELISA_App"
+    session_name += ".ELISA_Session"
     with open(session_name, 'wb') as f:
         pickle.dump((totaal, check, check2, dilution, seprate_dilution, end_dilution, dictionary, HD, delete,
                      points_dictionary, mean_ST_dictionary, mean,
                      std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower, upper,
                      intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au,
                      unit_name, row_standard, column_standard, elisa_type, cut_off_type, divide_number,
-                     seprate_dilution, st_finder, dict_st, list_st_values, standard, rule,
+                     seprate_dilution, st_finder, dict_st, list_st_values, standard, rule, formulas,
                      serializers.serialize("xml", Plates.objects.all())), f, protocol=4)  # Plates.objects is serialized to xml, preventing upgrading issues with Django
         print("pickle success")
+        f.close()
+
+def readable_session_writeout():
+    session_name = "appdata.txt"
+    with open(join(settings.BASE_DIR, "temp", "targetdir", session_name), 'w') as f:
+        for value, name in zip((totaal, check, check2, dilution, seprate_dilution, end_dilution, dictionary, HD, delete,
+                     points_dictionary, mean_ST_dictionary, mean,
+                     std, mean2, std2, check_cut_off, cut_data, outlier_value, cut_off_value, end_result, lower,
+                     upper,
+                     intermediate_dictionary, params_dictionary, final_dictionary, final_list, cut_off_value_au,
+                     unit_name, row_standard, column_standard, elisa_type, cut_off_type, divide_number,
+                     seprate_dilution, st_finder, dict_st, list_st_values, standard, rule, formulas), (
+                    "totaal", "check", "check2", "dilution", "seprate_dilution", "end_dilution", "dictionary", "HD", "delete",
+                    "points_dictionary", "mean_ST_dictionary", "mean",
+                    "std", "mean2", "std2", "check_cut_off", "cut_data", "outlier_value", "cut_off_value", "end_result", "lower",
+                    "upper", "intermediate_dictionary", "params_dictionary", "final_dictionary", "final_list", "cut_off_value_au",
+                    "unit_name", "row_standard", "column_standard", "elisa_type", "cut_off_type", "divide_number",
+                    "seprate_dilution", "st_finder", "dict_st", "list_st_values", "standard", "rule", "formulas")):
+
+            f.write(name+"\n" + str(value) + "\n\n")
         f.close()
 
 
@@ -1525,7 +1548,7 @@ def session_readin(session):
         "std", "mean2", "std2", "check_cut_off", "cut_data", "outlier_value", "cut_off_value", "end_result", "lower",
         "upper", "intermediate_dictionary", "params_dictionary", "final_dictionary", "final_list", "cut_off_value_au",
         "unit_name", "row_standard", "column_standard", "elisa_type", "cut_off_type", "divide_number",
-        "seprate_dilution", "st_finder", "dict_st", "list_st_values", "standard", "rule")
+        "seprate_dilution", "st_finder", "dict_st", "list_st_values", "standard", "rule", "formulas")
 
     with session as f:
         sessiontuple = pickle.load(f)
@@ -1586,9 +1609,16 @@ def report_writeout():
         print(key)
         print(value)
     """
+    #set data source and output location
     landing = join(settings.BASE_DIR, "temp", "zipped_results")    #join("Reports", datetime.datetime.now().strftime("Report %d-%m-%Y  %H.%M"))
     target = join(settings.BASE_DIR, "temp", "targetdir")
-    shutil.rmtree(target, ignore_errors=True)
+    #clear dir contents to prevent overlap
+    try:
+        for file in listdir(target):
+                remove(join(target, file))
+        rmdir(target)
+    except PermissionError:
+        raise Exception("Directory open in other program, can't clear!")
     mkdir(target)
     """
     #Create directory, checking for uniqueness
@@ -1622,6 +1652,10 @@ def report_writeout():
                 f.write(str(element) + "\t")
             f.write("\n")
         f.close()
+
+    #save all data into readable file for Marc to deal with
+    readable_session_writeout()
+
     #zip it up and make it downloadable
     if exists(landing+".zip"):
         remove(landing+".zip")
