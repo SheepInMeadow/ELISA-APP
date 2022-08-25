@@ -1519,6 +1519,7 @@ def session_writeout(session_name):  # Note: currently used pickle version = 4, 
                      serializers.serialize("xml", Plates.objects.all())), f, protocol=4)  # Plates.objects is serialized to xml, preventing upgrading issues with Django
         print("pickle success")
         f.close()
+        return session_name
 
 def readable_session_writeout():
     session_name = "appdata.txt"
@@ -1656,8 +1657,16 @@ def report_writeout():
     #save all data into readable file for Marc to deal with
     readable_session_writeout()
 
+    #Include a session
+    sessionloc = session_writeout(datetime.datetime.now().strftime("%d-%m-%Y  %H.%M.%S"))
+    shutil.copy2(sessionloc, target)
+
     #zip it up and make it downloadable
     if exists(landing+".zip"):
         remove(landing+".zip")
     shutil.make_archive(landing, 'zip', target)
+
+    #remove session to make sure there's no trailing data
+    remove(sessionloc)
+
     return landing+".zip"
